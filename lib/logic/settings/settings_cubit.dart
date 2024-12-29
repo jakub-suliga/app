@@ -44,7 +44,7 @@ class SettingsCubit extends Cubit<SettingsState> {
           ),
         );
 
-  // eSense
+  // eSense: wird nur aufgerufen, wenn der Nutzer "Speichern" drückt
   void setESenseDeviceName(String name) {
     emit(state.copyWith(eSenseDeviceName: name));
   }

@@ -2,12 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../logic/settings/settings_cubit.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
   @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  late TextEditingController _deviceNameController;
+  String _tempName = ''; // Puffer für das Textfeld
+
+  @override
+  void initState() {
+    super.initState();
+    // Starte mit dem aktuellen Gerätenamen aus dem State
+    final currentName = context.read<SettingsCubit>().state.eSenseDeviceName;
+    _tempName = currentName;
+    _deviceNameController = TextEditingController(text: currentName);
+  }
+
+  @override
+  void dispose() {
+    _deviceNameController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Zugriff auf SettingsCubit
     final settingsCubit = context.read<SettingsCubit>();
 
     return Scaffold(
@@ -21,28 +43,49 @@ class SettingsScreen extends StatelessWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // -------------------------------------------
                 // eSense-Einstellungen
+                // -------------------------------------------
                 const Text(
                   'eSense',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
+
+                // TextField NUR zur Eingabe. Änderung wird in _tempName gepuffert.
                 TextField(
                   decoration: const InputDecoration(
                     labelText: 'eSense-Gerätename',
                     border: OutlineInputBorder(),
                   ),
-                  controller: TextEditingController(
-                    text: state.eSenseDeviceName,
-                  ),
+                  controller: _deviceNameController,
                   onChanged: (val) {
-                    settingsCubit.setESenseDeviceName(val.trim());
+                    _tempName = val; // nur lokal speichern
                   },
                 ),
-                const SizedBox(height: 16),
-                const Divider(),
+                const SizedBox(height: 8),
 
+                // Speichern-Button => erst DANN wird der Name ins State übernommen
+                ElevatedButton(
+                  onPressed: () {
+                    settingsCubit.setESenseDeviceName(_tempName.trim());
+                    // Option: Zeige SnackBar oder so
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'eSense-Gerätename gespeichert: "${_tempName.trim()}"',
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Speichern'),
+                ),
+                const SizedBox(height: 16),
+
+                const Divider(),
+                // -------------------------------------------
                 // Aufgabenliste-Einstellungen
+                // -------------------------------------------
                 const Text(
                   'Aufgabenliste',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -84,7 +127,6 @@ class SettingsScreen extends StatelessWidget {
   // ---------------------------------------------------------------------------
   // Dialog: Tags
   // ---------------------------------------------------------------------------
-
   void _showEditTagsDialog(BuildContext context, List<String> tags) {
     showModalBottomSheet(
       context: context,
@@ -101,7 +143,6 @@ class SettingsScreen extends StatelessWidget {
   // ---------------------------------------------------------------------------
   // Dialog: Priorities
   // ---------------------------------------------------------------------------
-
   void _showEditPrioritiesDialog(BuildContext context, List<String> priorities) {
     showModalBottomSheet(
       context: context,
@@ -117,7 +158,7 @@ class SettingsScreen extends StatelessWidget {
 }
 
 // ============================================================================
-// Tags-Bearbeitung
+// Tags-Bearbeitung (unverändert)
 // ============================================================================
 class _EditTagsSection extends StatefulWidget {
   final List<String> tags;
@@ -253,7 +294,7 @@ class _EditTagsSectionState extends State<_EditTagsSection> {
 }
 
 // ============================================================================
-// Priorities-Bearbeitung
+// Priorities-Bearbeitung (unverändert)
 // ============================================================================
 class _EditPrioritiesSection extends StatefulWidget {
   final List<String> priorities;
@@ -296,7 +337,7 @@ class _EditPrioritiesSectionState extends State<_EditPrioritiesSection> {
               final item = priorities.removeAt(oldIndex);
               priorities.insert(newIndex, item);
             });
-            // Wichtig: die Reihenfolge in SettingsCubit speichern
+            // Wichtig: Reihenfolge in SettingsCubit speichern
             settingsCubit.reorderPriorities(oldIndex, newIndex);
           },
           children: [

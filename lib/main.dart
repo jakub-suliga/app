@@ -6,7 +6,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 // Importiere die Cubits
 import 'core/router/app_router.dart';
 import 'logic/settings/settings_cubit.dart';
-import 'logic/tasks/tasks_settings_cubit.dart';
 import 'logic/esense/esense_cubit.dart';
 import 'logic/tasks/tasks_cubit.dart';
 import 'logic/pomodoro/pomodoro_cubit.dart';
@@ -43,9 +42,6 @@ void main() {
         ),
         BlocProvider<ThemeCubit>(
           create: (_) => ThemeCubit(),
-        ),
-        BlocProvider<TasksSettingsCubit>(
-          create: (_) => TasksSettingsCubit(),
         ),
         BlocProvider<SettingsCubit>(
         create: (_) => SettingsCubit(),
