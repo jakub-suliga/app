@@ -234,7 +234,7 @@ class _TasksScreenState extends State<TasksScreen> {
 
 // Ein vereinfachtes BottomSheet:
 class _TaskCreationSheet extends StatefulWidget {
-  const _TaskCreationSheet({super.key});
+  const _TaskCreationSheet();
 
   @override
   State<_TaskCreationSheet> createState() => _TaskCreationSheetState();

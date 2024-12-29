@@ -28,14 +28,10 @@ class TasksSettingsInitial extends TasksSettingsState {
 /// Zustand nach einer Aktualisierung der Einstellungen.
 class TasksSettingsUpdated extends TasksSettingsState {
   TasksSettingsUpdated({
-    required bool showCompletedTasks,
-    required List<String> tags,
-    required List<String> priorities,
-  }) : super(
-          showCompletedTasks: showCompletedTasks,
-          tags: tags,
-          priorities: priorities,
-        );
+    required super.showCompletedTasks,
+    required super.tags,
+    required super.priorities,
+  });
 }
 
 /// Cubit zur Verwaltung der Aufgabenlisten-Einstellungen.

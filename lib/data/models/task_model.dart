@@ -2,7 +2,7 @@ class TaskModel {
   final String id;
   final String title;
   final String description;
-  final bool isDone;    // <-- Neu hinzugefügt!
+  final bool isDone;
   final DateTime? dueDate;
   final Duration? estimatedDuration;
   final int priority;   // 0 = niedrig, 1 = mittel, 2 = hoch
@@ -15,10 +15,10 @@ class TaskModel {
     required this.id,
     required this.title,
     this.description = '',
-    this.isDone = false,          // default: false
+    this.isDone = false,          
     this.dueDate,
     this.estimatedDuration,
-    this.priority = 1,
+    this.priority = 0,
     this.tags = const [],
     this.repeatDaily = false,
     this.repeatWeekly = false,

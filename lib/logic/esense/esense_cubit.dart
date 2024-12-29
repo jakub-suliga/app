@@ -8,41 +8,38 @@ class ESenseCubit extends Cubit<ESenseState> {
 
   ESenseCubit({required this.esenseRepo}) : super(ESenseInitial());
 
-  /// Verbindung starten
   Future<void> connectToESense() async {
     emit(ESenseConnecting());
+    print('** [ESenseCubit] connectToESense()');
 
-    bool success = await esenseRepo.connect(
-      onDeviceEvent: (event) {
-        // Falls Battery, Button etc. => 
-        // hier könntest du den State anpassen oder Logik abbilden
+    final success = await esenseRepo.connect(
+      onConnectionEvent: (connEvent) {
+        print('** [ESenseCubit] ConnectionEvent: $connEvent');
+        if (connEvent.type == ConnectionType.connected) {
+          emit(ESenseConnected());
+        } else if (connEvent.type == ConnectionType.disconnected) {
+          emit(ESenseDisconnected());
+        } else if (connEvent.type == ConnectionType.device_not_found) {
+          emit(ESenseError('Device not found.'));
+        }
+        // etc.
       },
       onSensorEvent: (sensorData) {
-        // Hier IMU-Daten => Accel / Gyro
+        //print('** [ESenseCubit] SensorEvent: $sensorData');
         emit(ESenseSensorData(sensorData));
       },
     );
 
     if (!success) {
-      emit(ESenseError("Verbindung zu eSense nicht möglich"));
-    } else {
-      // Sobald connect() true zurückgibt, 
-      // warten wir auf ConnectionType-Bestätigung.
-      // Du könntest hier optional ESenseConnected() emitten – 
-      // oder du hörst in onDeviceEvent auf ConnectionType.connected.
+      emit(ESenseError('Kein eSense gefunden!'));
+      print('!! [ESenseCubit] -> kein eSense oder connect() fehlgeschlagen.');
     }
   }
 
   Future<void> disconnectESense() async {
+    print('** [ESenseCubit] disconnectESense()');
     await esenseRepo.disconnect();
     emit(ESenseDisconnected());
   }
-
-  Future<void> setSamplingRate(int rate) async {
-    try {
-      await esenseRepo.setSamplingRate(rate);
-    } catch (e) {
-      emit(ESenseError(e.toString()));
-    }
-  }
 }
+

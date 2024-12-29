@@ -12,7 +12,14 @@
 		<string>external-accessory</string>
 		<string>fetch</string>
 	</array>
-
+	<key>NSBluetoothPeripheralUsageDescription</key>  
+	<string>Need BLE permission</string>  
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>  
+	<string>Need Location permission</string>  
+	<key>NSLocationAlwaysUsageDescription</key>  
+	<string>Need Location permission</string>  
+	<key>NSLocationWhenInUseUsageDescription</key>  
+	<string>Need Location permission</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

@@ -1,52 +1,77 @@
-// lib/data/data_providers/esense_data_provider.dart
-
-import 'package:esense_flutter/esense.dart';
 import 'dart:async';
+import 'dart:io';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:esense_flutter/esense.dart';
 
 class ESenseDataProvider {
-  final String deviceName;
-  late ESenseManager _manager;
+  ESenseManager? _manager;
 
-  final StreamController<ESenseEvent> _deviceStreamController =
-      StreamController<ESenseEvent>.broadcast();
-  final StreamController<SensorEvent> _sensorStreamController =
-      StreamController<SensorEvent>.broadcast();
+  // Streams
+  final _connStreamController = StreamController<ConnectionEvent>.broadcast();
+  final _deviceStreamController = StreamController<ESenseEvent>.broadcast();
+  final _sensorStreamController = StreamController<SensorEvent>.broadcast();
 
-  /// Externe Streams zum Anhören
+  Stream<ConnectionEvent> get connectionEvents => _connStreamController.stream;
   Stream<ESenseEvent> get deviceEvents => _deviceStreamController.stream;
   Stream<SensorEvent> get sensorEvents => _sensorStreamController.stream;
 
-  ESenseDataProvider({required this.deviceName}) {
-    _manager = ESenseManager(deviceName);
+  ESenseDataProvider();
+
+  Future<void> _askForPermissions() async {
+    // Bluetooth-Permission
+    if (!(await Permission.bluetoothScan.request().isGranted &&
+        await Permission.bluetoothConnect.request().isGranted)) {
+      print('!! [ESenseDataProvider] Keine BLE-Permissions gewährt.');
+    }
+
+    // Location für Android
+    if (Platform.isAndroid) {
+      if (!(await Permission.locationWhenInUse.request().isGranted)) {
+        print('!! [ESenseDataProvider] Keine Location-Permission.');
+      }
+    }
   }
 
-  /// Verbindung aufbauen
-  Future<bool> connect() async {
-    bool success = await _manager.connect();
-    if (success) {
-      // eSenseEvents abonnieren
-      _manager.eSenseEvents.listen((esenseEvent) {
-        _deviceStreamController.add(esenseEvent);
-      });
+  /// Verbindet sich mit dem eSense-Gerät [deviceName], z. B. "eSense-0598".
+  Future<bool> connectToName(String deviceName) async {
+    print('** [ESenseDataProvider] connectToName("$deviceName") aufgerufen.');
+    await _askForPermissions();
 
-      // SensorEvents abonnieren
-      _manager.sensorEvents.listen((sensorEvent) {
-        _sensorStreamController.add(sensorEvent);
-      });
-    }
+    _manager = ESenseManager(deviceName);
+
+    // connectionEvents
+    _manager!.connectionEvents.listen((connEvent) {
+      print('** [ESenseDataProvider] ConnectionEvent: $connEvent');
+      _connStreamController.add(connEvent);
+    });
+
+    // eSenseEvents
+    _manager!.eSenseEvents.listen((event) {
+      print('** [ESenseDataProvider] eSenseEvent: $event');
+      _deviceStreamController.add(event);
+    });
+
+    // SensorEvents
+    _manager!.sensorEvents.listen((sensorEvent) {
+      //print('** [ESenseDataProvider] SensorEvent: $sensorEvent');
+      _sensorStreamController.add(sensorEvent);
+    });
+
+    final success = await _manager!.connect();
+    print('** [ESenseDataProvider] connect() -> $success');
     return success;
   }
 
-  /// Sampling Rate einstellen
-  Future<void> setSamplingRate(int rate) async {
-    await _manager.setSamplingRate(rate);
-  }
-
-  /// Verbindung trennen
   Future<void> disconnect() async {
-    await _manager.disconnect();
+    print('** [ESenseDataProvider] disconnect() aufgerufen.');
+
+    if (_manager != null && _manager!.connected) {
+      print('** [ESenseDataProvider] -> disconnect() vom eSense.');
+      await _manager!.disconnect();
+    }
+
+    await _connStreamController.close();
     await _deviceStreamController.close();
     await _sensorStreamController.close();
   }
 }
-
