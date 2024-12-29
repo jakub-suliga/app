@@ -1,19 +1,22 @@
-
 part of 'esense_cubit.dart';
 
-abstract class ESenseState {}
+/// Basis-Klasse für alle eSense-States
+abstract class ESenseConnectionState {}
 
-class ESenseInitial extends ESenseState {}
-class ESenseConnecting extends ESenseState {}
-class ESenseConnected extends ESenseState {}
-class ESenseDisconnected extends ESenseState {}
+/// Anfangszustand: Noch nichts gemacht
+class ESenseConnectionInitial extends ESenseConnectionState {}
 
-class ESenseError extends ESenseState {
+/// Zeigt an, dass wir versuchen, uns zu verbinden
+class ESenseConnectionConnecting extends ESenseConnectionState {}
+
+/// Wenn wir verbunden sind
+class ESenseConnectionConnected extends ESenseConnectionState {}
+
+/// Wenn die Verbindung getrennt (oder nie hergestellt) ist
+class ESenseConnectionDisconnected extends ESenseConnectionState {}
+
+/// Ein Fehlerzustand (z.B. wenn Connect fehlschlägt)
+class ESenseConnectionError extends ESenseConnectionState {
   final String message;
-  ESenseError(this.message);
-}
-
-class ESenseSensorData extends ESenseState {
-  final SensorEvent sensor;
-  ESenseSensorData(this.sensor);
+  ESenseConnectionError(this.message);
 }

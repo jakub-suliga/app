@@ -1,129 +1,93 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
-// Passe ggf. die Pfade zu deinen Cubits/States an
 import '../../../logic/pomodoro/pomodoro_cubit.dart';
-import '../../../logic/volume/volume_cubit.dart';
-import '../../../logic/volume/volume_state.dart';
 import '../../../logic/tasks/tasks_cubit.dart';
 import '../../../data/models/task_model.dart';
 
 class PomodoroScreen extends StatelessWidget {
   const PomodoroScreen({super.key});
 
-  bool _isEnvironmentTooLoud(VolumeState state) {
-    // Falls du in VolumeCubit eine Pufferspeicherung von "zu laut" hast,
-    // kannst du hier eine komplexere Auswertung machen.
-    if (state is VolumeTooHigh) return true;
-    return false;
-  }
-
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<VolumeCubit, VolumeState>(
-      builder: (context, volumeState) {
-        final isTooLoud = _isEnvironmentTooLoud(volumeState);
+    return BlocBuilder<PomodoroCubit, PomodoroState>(
+      builder: (context, pomodoroState) {
+        // Standard: 25 min in Sekunden
+        int remainingSeconds = 25 * 60;
+        if (pomodoroState is PomodoroRunning) {
+          remainingSeconds = pomodoroState.remainingSeconds;
+        } else if (pomodoroState is PomodoroPaused) {
+          remainingSeconds = pomodoroState.remainingSeconds;
+        }
 
-        return BlocBuilder<PomodoroCubit, PomodoroState>(
-          builder: (context, pomodoroState) {
-            // Restliche Zeit bestimmen
-            int remainingSeconds = 0;
-            if (pomodoroState is PomodoroRunning) {
-              remainingSeconds = pomodoroState.remainingSeconds;
-            } else if (pomodoroState is PomodoroPaused) {
-              remainingSeconds = pomodoroState.remainingSeconds;
-            } else {
-              // PomodoroInitial oder Finished => Standard: 25 min
-              remainingSeconds = 25 * 60;
-            }
+        final minutes = (remainingSeconds ~/ 60).toString().padLeft(2, '0');
+        final seconds = (remainingSeconds % 60).toString().padLeft(2, '0');
 
-            final minutes = (remainingSeconds ~/ 60).toString().padLeft(2, '0');
-            final seconds = (remainingSeconds % 60).toString().padLeft(2, '0');
+        final isRunning = pomodoroState is PomodoroRunning;
+        final isPaused = pomodoroState is PomodoroPaused;
 
-            // Ermitteln, ob Timer läuft / pausiert
-            final isRunning = pomodoroState is PomodoroRunning;
-            final isPaused = pomodoroState is PomodoroPaused;
-
-            return Scaffold(
-              // Du könntest z. B. hier auch ein dunkles Scaffold-Theme erzwingen:
-              // backgroundColor: Colors.black,
-              appBar: AppBar(
-                title: Text(
-                  isTooLoud
-                      ? 'Lernumgebung: SCHLECHT'
-                      : 'Lernumgebung: GUT',
-                  style: TextStyle(
-                    color: isTooLoud ? Colors.red : Colors.green,
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Pomodoro'),
+            centerTitle: true,
+          ),
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildCircleIndicator(
+                    pomodoroState,
+                    minutes,
+                    seconds,
+                    isPaused,
                   ),
-                ),
-                centerTitle: true,
-              ),
-              body: Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // "Kreis" + Zeit
-                      _buildCircleIndicator(
-                        pomodoroState,
-                        minutes,
-                        seconds,
-                        isPaused,
-                      ),
-                      const SizedBox(height: 20),
+                  const SizedBox(height: 20),
+                  _buildTaskDropdown(context),
+                  const SizedBox(height: 20),
 
-                      // Dropdown für aktuelle Aufgabe
-                      _buildTaskDropdown(context),
-
-                      const SizedBox(height: 20),
-
-                      // Buttons je nach State
-                      if (!isRunning && !isPaused)
+                  // Buttons je nach State
+                  if (!isRunning && !isPaused)
+                    ElevatedButton(
+                      onPressed: () {
+                        context.read<PomodoroCubit>().startPomodoro();
+                      },
+                      child: const Text('Starten'),
+                    )
+                  else if (isRunning)
+                    ElevatedButton(
+                      onPressed: () {
+                        context.read<PomodoroCubit>().pausePomodoro();
+                      },
+                      child: const Text('Pause'),
+                    )
+                  else if (isPaused)
+                    Column(
+                      children: [
                         ElevatedButton(
                           onPressed: () {
-                            context.read<PomodoroCubit>().startPomodoro();
+                            context.read<PomodoroCubit>().resumePomodoro();
                           },
-                          child: const Text('Starten'),
-                        )
-                      else if (isRunning)
-                        ElevatedButton(
-                          onPressed: () {
-                            context.read<PomodoroCubit>().pausePomodoro();
-                          },
-                          child: const Text('Pause'),
-                        )
-                      else if (isPaused)
-                        Column(
-                          children: [
-                            ElevatedButton(
-                              onPressed: () {
-                                context.read<PomodoroCubit>().resumePomodoro();
-                              },
-                              child: const Text('Fortsetzen'),
-                            ),
-                            const SizedBox(height: 8),
-                            ElevatedButton(
-                              onPressed: () {
-                                // End => reset
-                                context.read<PomodoroCubit>().resetPomodoro();
-                              },
-                              child: const Text('Beenden'),
-                            ),
-                          ],
+                          child: const Text('Fortsetzen'),
                         ),
-                    ],
-                  ),
-                ),
+                        const SizedBox(height: 8),
+                        ElevatedButton(
+                          onPressed: () {
+                            context.read<PomodoroCubit>().resetPomodoro();
+                          },
+                          child: const Text('Beenden'),
+                        ),
+                      ],
+                    ),
+                ],
               ),
-            );
-          },
+            ),
+          ),
         );
       },
     );
   }
 
-  /// Kreisförmiger Indikator mit großer Zeit-Anzeige
   Widget _buildCircleIndicator(
     PomodoroState state,
     String minutes,
@@ -139,20 +103,17 @@ class PomodoroScreen extends StatelessWidget {
     }
 
     return SizedBox(
-      // Hier vergrößern wir den Kreis, damit die Zeit nicht überdeckt wird
       width: 400,
       height: 400,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Dieser CircularProgressIndicator wird größer (strokeWidth, Farbe, etc.)
           CircularProgressIndicator(
             value: progress,
             strokeWidth: 10,
-            backgroundColor: Colors.grey.shade800,
-            // Optional: color: ...
+            backgroundColor: Colors.grey.shade300,
+            // color: Colors.blue, // Optional Farbe anpassen
           ),
-          // Die Zeit in der Mitte
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -161,7 +122,6 @@ class PomodoroScreen extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 60,
                   fontWeight: FontWeight.bold,
-                  // color: Colors.white, // Falls du dunklen Hintergrund willst
                 ),
               ),
               if (isPaused)
@@ -176,7 +136,7 @@ class PomodoroScreen extends StatelessWidget {
     );
   }
 
-  /// DropdownButton für aktuelle Aufgabe
+  /// DropdownButton für aktuelle Task-Auswahl
   Widget _buildTaskDropdown(BuildContext context) {
     return BlocBuilder<TasksCubit, TasksState>(
       builder: (context, tasksState) {
@@ -185,8 +145,7 @@ class PomodoroScreen extends StatelessWidget {
           if (tasks.isEmpty) {
             return const Text('Keine Aufgaben vorhanden.');
           }
-
-          // Sortiere nach Fälligkeitsdatum + Prio
+          // Sortieren nach Fälligkeitsdatum + Prio
           final sortedTasks = [...tasks];
           sortedTasks.sort((a, b) {
             final dateA = a.dueDate ?? DateTime(3000);
@@ -207,9 +166,9 @@ class PomodoroScreen extends StatelessWidget {
                 child: Text(task.title),
               );
             }).toList(),
-            onChanged: (task) {
-              // Hier könntest du dir die Task merken,
-              // oder in TasksCubit / PomodoroCubit speichern
+            onChanged: (newTask) {
+              // Falls du was damit machen willst
+              // z.B. in PomodoroCubit speichern etc.
             },
           );
         }

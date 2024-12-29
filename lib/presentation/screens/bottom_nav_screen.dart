@@ -16,7 +16,6 @@ class BottomNavScreen extends StatefulWidget {
 class _BottomNavScreenState extends State<BottomNavScreen> {
   int _currentIndex = 0;
 
-  // Definiere die festen Navigationsitems
   final List<_NavItem> allItems = [
     _NavItem(label: 'Environment', icon: Icons.graphic_eq, widget: const EnvironmentScreen()),
     _NavItem(label: 'Pomodoro', icon: Icons.timer, widget: const PomodoroScreen()),
@@ -39,15 +38,15 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
       bottomNavigationBar: BottomNavigationBar(
         items: items,
         currentIndex: _currentIndex,
-        selectedItemColor: Colors.blue, // Anpassung der ausgewählten Farbe
-        unselectedItemColor: Colors.grey, // Anpassung der nicht ausgewählten Farbe
-        showUnselectedLabels: true, // Zeige Labels auch für nicht ausgewählte Tabs
+        selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.grey,
+        showUnselectedLabels: true,
         onTap: (index) {
           setState(() {
             _currentIndex = index;
           });
         },
-        type: BottomNavigationBarType.fixed, // Damit alle Labels angezeigt werden
+        type: BottomNavigationBarType.fixed,
       ),
     );
   }

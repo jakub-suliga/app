@@ -1,20 +1,14 @@
-// lib/screens/settings/settings_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../logic/tasks/tasks_settings_cubit.dart';
-import '../../logic/pomodoro/pomodoro_cubit.dart';
-import '../../logic/theme/theme_cubit.dart';
+import '../../logic/settings/settings_cubit.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Zugriff auf die benötigten Cubits
-    final tasksSettingsCubit = context.read<TasksSettingsCubit>();
-    final pomodoroCubit = context.read<PomodoroCubit>();
-    final themeCubit = context.read<ThemeCubit>();
+    // Zugriff auf SettingsCubit
+    final settingsCubit = context.read<SettingsCubit>();
 
     return Scaffold(
       appBar: AppBar(
@@ -22,167 +16,75 @@ class SettingsScreen extends StatelessWidget {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Allgemeine Einstellungen
-            const Text(
-              'Allgemein',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            Row(
+        child: BlocBuilder<SettingsCubit, SettingsState>(
+          builder: (context, state) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Dark Mode'),
-                const Spacer(),
-                BlocBuilder<ThemeCubit, ThemeState>(
-                  builder: (context, state) {
-                    final isDarkMode = state.themeData.brightness == Brightness.dark;
-                    return Switch(
-                      value: isDarkMode,
-                      onChanged: (value) {
-                        themeCubit.toggleTheme();
-                      },
-                    );
+                // eSense-Einstellungen
+                const Text(
+                  'eSense',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'eSense-Gerätename',
+                    border: OutlineInputBorder(),
+                  ),
+                  controller: TextEditingController(
+                    text: state.eSenseDeviceName,
+                  ),
+                  onChanged: (val) {
+                    settingsCubit.setESenseDeviceName(val.trim());
+                  },
+                ),
+                const SizedBox(height: 16),
+                const Divider(),
+
+                // Aufgabenliste-Einstellungen
+                const Text(
+                  'Aufgabenliste',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                SwitchListTile(
+                  title: const Text('Erledigte Aufgaben anzeigen'),
+                  value: state.showCompletedTasks,
+                  onChanged: (val) {
+                    settingsCubit.toggleShowCompletedTasks(val);
+                  },
+                ),
+                const SizedBox(height: 8),
+
+                // Tags
+                ListTile(
+                  title: const Text('Tags bearbeiten'),
+                  trailing: const Icon(Icons.edit),
+                  onTap: () {
+                    _showEditTagsDialog(context, state.tags);
+                  },
+                ),
+
+                // Prioritäten
+                ListTile(
+                  title: const Text('Prioritäten bearbeiten'),
+                  trailing: const Icon(Icons.edit),
+                  onTap: () {
+                    _showEditPrioritiesDialog(context, state.priorities);
                   },
                 ),
               ],
-            ),
-            const Divider(),
-
-            // Aufgabenliste-Einstellungen
-            const Text(
-              'Aufgabenliste',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            BlocBuilder<TasksSettingsCubit, TasksSettingsState>(
-              builder: (context, state) {
-                return Column(
-                  children: [
-                    SwitchListTile(
-                      title: const Text('Erledigte Aufgaben anzeigen'),
-                      value: state.showCompletedTasks,
-                      onChanged: (val) {
-                        tasksSettingsCubit.toggleShowCompletedTasks(val);
-                      },
-                    ),
-                    ListTile(
-                      title: const Text('Tags bearbeiten'),
-                      trailing: const Icon(Icons.edit),
-                      onTap: () {
-                        _showEditTagsDialog(context, state.tags);
-                      },
-                    ),
-                    ListTile(
-                      title: const Text('Prioritäten bearbeiten'),
-                      trailing: const Icon(Icons.edit),
-                      onTap: () {
-                        _showEditPrioritiesDialog(context, state.priorities);
-                      },
-                    ),
-                  ],
-                );
-              },
-            ),
-            const Divider(),
-
-            // Pomodoro-Einstellungen
-            const Text(
-              'Pomodoro',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            BlocBuilder<PomodoroCubit, PomodoroState>(
-              builder: (context, state) {
-                final pomodoroMin = pomodoroCubit.pomodoroDuration;
-                final shortBreakMin = pomodoroCubit.shortBreak;
-                final longBreakMin = pomodoroCubit.longBreak;
-
-                final pomodoroCtrl = TextEditingController(text: pomodoroMin.toString());
-                final shortCtrl = TextEditingController(text: shortBreakMin.toString());
-                final longCtrl = TextEditingController(text: longBreakMin.toString());
-
-                return Column(
-                  children: [
-                    _buildNumberField(
-                      context,
-                      'Pomodoro (Min)',
-                      pomodoroCtrl,
-                      (val) {
-                        final parsed = int.tryParse(val);
-                        if (parsed != null) {
-                          pomodoroCubit.setPomodoroDuration(parsed);
-                        }
-                      },
-                    ),
-                    _buildNumberField(
-                      context,
-                      'Kurze Pause (Min)',
-                      shortCtrl,
-                      (val) {
-                        final parsed = int.tryParse(val);
-                        if (parsed != null) {
-                          pomodoroCubit.setShortBreak(parsed);
-                        }
-                      },
-                    ),
-                    _buildNumberField(
-                      context,
-                      'Lange Pause (Min)',
-                      longCtrl,
-                      (val) {
-                        final parsed = int.tryParse(val);
-                        if (parsed != null) {
-                          pomodoroCubit.setLongBreak(parsed);
-                        }
-                      },
-                    ),
-                  ],
-                );
-              },
-            ),
-            const Divider(),
-          ],
+            );
+          },
         ),
       ),
     );
   }
 
-  /// Erstellt ein Textfeld für ganze Zahlen mit einem Label
-  Widget _buildNumberField(
-    BuildContext context,
-    String label,
-    TextEditingController controller,
-    Function(String) onSaved,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(label),
-          ),
-          SizedBox(
-            width: 80,
-            child: TextField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                isDense: true, // Reduziert die Höhe des Textfelds
-                contentPadding: EdgeInsets.all(8),
-              ),
-              onSubmitted: (val) {
-                if (val.isNotEmpty) {
-                  onSaved(val);
-                }
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // ---------------------------------------------------------------------------
+  // Dialog: Tags
+  // ---------------------------------------------------------------------------
 
-  /// Dialog zum Bearbeiten der Tags
   void _showEditTagsDialog(BuildContext context, List<String> tags) {
     showModalBottomSheet(
       context: context,
@@ -190,13 +92,16 @@ class SettingsScreen extends StatelessWidget {
       builder: (ctx) {
         return Padding(
           padding: MediaQuery.of(ctx).viewInsets,
-          child: EditTagsSection(tags: tags),
+          child: _EditTagsSection(tags: tags),
         );
       },
     );
   }
 
-  /// Dialog zum Bearbeiten der Prioritäten
+  // ---------------------------------------------------------------------------
+  // Dialog: Priorities
+  // ---------------------------------------------------------------------------
+
   void _showEditPrioritiesDialog(BuildContext context, List<String> priorities) {
     showModalBottomSheet(
       context: context,
@@ -204,24 +109,26 @@ class SettingsScreen extends StatelessWidget {
       builder: (ctx) {
         return Padding(
           padding: MediaQuery.of(ctx).viewInsets,
-          child: EditPrioritiesSection(priorities: priorities),
+          child: _EditPrioritiesSection(priorities: priorities),
         );
       },
     );
   }
 }
 
-/// Widget für die Bearbeitung der Tags innerhalb des SettingsScreen
-class EditTagsSection extends StatefulWidget {
+// ============================================================================
+// Tags-Bearbeitung
+// ============================================================================
+class _EditTagsSection extends StatefulWidget {
   final List<String> tags;
 
-  const EditTagsSection({super.key, required this.tags});
+  const _EditTagsSection({required this.tags});
 
   @override
-  State<EditTagsSection> createState() => _EditTagsSectionState();
+  State<_EditTagsSection> createState() => _EditTagsSectionState();
 }
 
-class _EditTagsSectionState extends State<EditTagsSection> {
+class _EditTagsSectionState extends State<_EditTagsSection> {
   late List<String> tags;
   final TextEditingController _controller = TextEditingController();
 
@@ -233,7 +140,7 @@ class _EditTagsSectionState extends State<EditTagsSection> {
 
   @override
   Widget build(BuildContext context) {
-    final tasksSettingsCubit = context.read<TasksSettingsCubit>();
+    final settingsCubit = context.read<SettingsCubit>();
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -257,14 +164,12 @@ class _EditTagsSectionState extends State<EditTagsSection> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.edit),
-                    onPressed: () {
-                      _showEditTagDialog(context, tag);
-                    },
+                    onPressed: () => _showEditTagDialog(context, tag),
                   ),
                   IconButton(
                     icon: const Icon(Icons.delete),
                     onPressed: () {
-                      tasksSettingsCubit.removeTag(tag);
+                      settingsCubit.removeTag(tag);
                       setState(() {
                         tags.removeAt(index);
                       });
@@ -283,15 +188,11 @@ class _EditTagsSectionState extends State<EditTagsSection> {
               labelText: 'Neues Tag',
               border: OutlineInputBorder(),
             ),
-            onSubmitted: (val) {
-              _addTag(tasksSettingsCubit);
-            },
+            onSubmitted: (_) => _addTag(settingsCubit),
           ),
         ),
         ElevatedButton(
-          onPressed: () {
-            _addTag(tasksSettingsCubit);
-          },
+          onPressed: () => _addTag(settingsCubit),
           child: const Text('Tag hinzufügen'),
         ),
         const SizedBox(height: 16),
@@ -299,20 +200,20 @@ class _EditTagsSectionState extends State<EditTagsSection> {
     );
   }
 
-  void _addTag(TasksSettingsCubit cubit) {
+  void _addTag(SettingsCubit cubit) {
     final newTag = _controller.text.trim();
     if (newTag.isNotEmpty && !cubit.state.tags.contains(newTag)) {
       cubit.addTag(newTag);
       setState(() {
         tags.add(newTag);
-        _controller.clear();
       });
+      _controller.clear();
     }
   }
 
   void _showEditTagDialog(BuildContext context, String oldTag) {
     final TextEditingController controller = TextEditingController(text: oldTag);
-    final tasksSettingsCubit = context.read<TasksSettingsCubit>();
+    final settingsCubit = context.read<SettingsCubit>();
 
     showDialog(
       context: context,
@@ -325,16 +226,14 @@ class _EditTagsSectionState extends State<EditTagsSection> {
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-              },
+              onPressed: () => Navigator.pop(ctx),
               child: const Text('Abbrechen'),
             ),
             TextButton(
               onPressed: () {
                 final newTag = controller.text.trim();
                 if (newTag.isNotEmpty && newTag != oldTag) {
-                  tasksSettingsCubit.editTag(oldTag, newTag);
+                  settingsCubit.editTag(oldTag, newTag);
                   Navigator.pop(ctx);
                   setState(() {
                     final index = tags.indexOf(oldTag);
@@ -353,17 +252,19 @@ class _EditTagsSectionState extends State<EditTagsSection> {
   }
 }
 
-/// Widget für die Bearbeitung der Prioritäten innerhalb des SettingsScreen
-class EditPrioritiesSection extends StatefulWidget {
+// ============================================================================
+// Priorities-Bearbeitung
+// ============================================================================
+class _EditPrioritiesSection extends StatefulWidget {
   final List<String> priorities;
 
-  const EditPrioritiesSection({super.key, required this.priorities});
+  const _EditPrioritiesSection({required this.priorities});
 
   @override
-  State<EditPrioritiesSection> createState() => _EditPrioritiesSectionState();
+  State<_EditPrioritiesSection> createState() => _EditPrioritiesSectionState();
 }
 
-class _EditPrioritiesSectionState extends State<EditPrioritiesSection> {
+class _EditPrioritiesSectionState extends State<_EditPrioritiesSection> {
   late List<String> priorities;
   final TextEditingController _controller = TextEditingController();
 
@@ -375,7 +276,7 @@ class _EditPrioritiesSectionState extends State<EditPrioritiesSection> {
 
   @override
   Widget build(BuildContext context) {
-    final tasksSettingsCubit = context.read<TasksSettingsCubit>();
+    final settingsCubit = context.read<SettingsCubit>();
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -391,13 +292,12 @@ class _EditPrioritiesSectionState extends State<EditPrioritiesSection> {
           shrinkWrap: true,
           onReorder: (oldIndex, newIndex) {
             setState(() {
-              if (newIndex > oldIndex) {
-                newIndex -= 1;
-              }
+              if (newIndex > oldIndex) newIndex--;
               final item = priorities.removeAt(oldIndex);
               priorities.insert(newIndex, item);
-              tasksSettingsCubit.reorderPriorities(oldIndex, newIndex);
             });
+            // Wichtig: die Reihenfolge in SettingsCubit speichern
+            settingsCubit.reorderPriorities(oldIndex, newIndex);
           },
           children: [
             for (int index = 0; index < priorities.length; index++)
@@ -409,14 +309,13 @@ class _EditPrioritiesSectionState extends State<EditPrioritiesSection> {
                   children: [
                     IconButton(
                       icon: const Icon(Icons.edit),
-                      onPressed: () {
-                        _showEditPriorityDialog(context, priorities[index]);
-                      },
+                      onPressed: () =>
+                          _showEditPriorityDialog(context, priorities[index]),
                     ),
                     IconButton(
                       icon: const Icon(Icons.delete),
                       onPressed: () {
-                        tasksSettingsCubit.removePriority(priorities[index]);
+                        settingsCubit.removePriority(priorities[index]);
                         setState(() {
                           priorities.removeAt(index);
                         });
@@ -435,15 +334,11 @@ class _EditPrioritiesSectionState extends State<EditPrioritiesSection> {
               labelText: 'Neue Priorität',
               border: OutlineInputBorder(),
             ),
-            onSubmitted: (val) {
-              _addPriority(tasksSettingsCubit);
-            },
+            onSubmitted: (_) => _addPriority(settingsCubit),
           ),
         ),
         ElevatedButton(
-          onPressed: () {
-            _addPriority(tasksSettingsCubit);
-          },
+          onPressed: () => _addPriority(settingsCubit),
           child: const Text('Priorität hinzufügen'),
         ),
         const SizedBox(height: 16),
@@ -451,20 +346,21 @@ class _EditPrioritiesSectionState extends State<EditPrioritiesSection> {
     );
   }
 
-  void _addPriority(TasksSettingsCubit cubit) {
+  void _addPriority(SettingsCubit cubit) {
     final newPriority = _controller.text.trim();
     if (newPriority.isNotEmpty && !cubit.state.priorities.contains(newPriority)) {
       cubit.addPriority(newPriority);
       setState(() {
         priorities.add(newPriority);
-        _controller.clear();
       });
+      _controller.clear();
     }
   }
 
   void _showEditPriorityDialog(BuildContext context, String oldPriority) {
-    final TextEditingController controller = TextEditingController(text: oldPriority);
-    final tasksSettingsCubit = context.read<TasksSettingsCubit>();
+    final TextEditingController controller =
+        TextEditingController(text: oldPriority);
+    final settingsCubit = context.read<SettingsCubit>();
 
     showDialog(
       context: context,
@@ -477,16 +373,14 @@ class _EditPrioritiesSectionState extends State<EditPrioritiesSection> {
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-              },
+              onPressed: () => Navigator.pop(ctx),
               child: const Text('Abbrechen'),
             ),
             TextButton(
               onPressed: () {
                 final newPriority = controller.text.trim();
                 if (newPriority.isNotEmpty && newPriority != oldPriority) {
-                  tasksSettingsCubit.editPriority(oldPriority, newPriority);
+                  settingsCubit.editPriority(oldPriority, newPriority);
                   Navigator.pop(ctx);
                   setState(() {
                     final index = priorities.indexOf(oldPriority);

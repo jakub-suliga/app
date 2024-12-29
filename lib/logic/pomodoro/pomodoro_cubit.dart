@@ -13,10 +13,8 @@ class PomodoroCubit extends Cubit<PomodoroState> {
 
   PomodoroCubit() : super(PomodoroInitial());
 
-  // Methoden für Settings:
   void setPomodoroDuration(int minutes) {
     pomodoroDuration = minutes;
-    // Wenn du willst, emit(...) oder setState
   }
 
   void setShortBreak(int minutes) {

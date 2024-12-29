@@ -1,60 +1,38 @@
-import 'dart:async';
-import 'package:esense_flutter/esense.dart';
-import '../data_providers/esense_scanner.dart';
+// lib/data/repositories/esense_repository.dart
+
 import '../data_providers/esense_data_provider.dart';
+import 'package:esense_flutter/esense.dart';
+import 'dart:async';
 
 class ESenseRepository {
-  final ESenseScanner scanner;
   final ESenseDataProvider dataProvider;
-
-  StreamSubscription<ConnectionEvent>? _connSub;
   StreamSubscription<ESenseEvent>? _deviceSub;
   StreamSubscription<SensorEvent>? _sensorSub;
 
-  ESenseRepository({
-    required this.scanner,
-    required this.dataProvider,
-  });
+  ESenseRepository({required this.dataProvider});
 
-  /// Scannt via [scanner] nach "eSense-XXXX".
-  /// Falls gefunden, ruft [dataProvider.connectToName] auf.
+  /// Verbindung aufbauen und Callback-Funktionen registrieren
   Future<bool> connect({
-    void Function(ConnectionEvent)? onConnectionEvent,
     void Function(ESenseEvent)? onDeviceEvent,
     void Function(SensorEvent)? onSensorEvent,
   }) async {
-    print('** [ESenseRepository] Starte Scan -> eSense Connect()');
-    final foundName = await scanner.scanForESense(timeoutSeconds: 5);
-
-    if (foundName == null) {
-      print('!! [ESenseRepository] Kein eSense-Gerät gefunden!');
-      return false;
-    }
-    print('** [ESenseRepository] Gefunden: $foundName -> connectToName(...)');
-
-    final success = await dataProvider.connectToName(foundName);
+    bool success = await dataProvider.connect();
     if (success) {
-      print('** [ESenseRepository] connect() erfolgreich gestartet.');
-      // Streams abonnieren
-      if (onConnectionEvent != null) {
-        _connSub = dataProvider.connectionEvents.listen(onConnectionEvent);
-      }
       if (onDeviceEvent != null) {
         _deviceSub = dataProvider.deviceEvents.listen(onDeviceEvent);
       }
       if (onSensorEvent != null) {
         _sensorSub = dataProvider.sensorEvents.listen(onSensorEvent);
       }
-    } else {
-      print('!! [ESenseRepository] connectToName($foundName) = false');
     }
-
     return success;
   }
 
+  Future<void> setSamplingRate(int rate) async {
+    await dataProvider.setSamplingRate(rate);
+  }
+
   Future<void> disconnect() async {
-    print('** [ESenseRepository] disconnect()');
-    await _connSub?.cancel();
     await _deviceSub?.cancel();
     await _sensorSub?.cancel();
     await dataProvider.disconnect();

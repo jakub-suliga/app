@@ -15,7 +15,6 @@ abstract class TasksSettingsState {
   });
 }
 
-/// Initialzustand mit Standardwerten.
 class TasksSettingsInitial extends TasksSettingsState {
   TasksSettingsInitial()
       : super(
@@ -25,7 +24,6 @@ class TasksSettingsInitial extends TasksSettingsState {
         );
 }
 
-/// Zustand nach einer Aktualisierung der Einstellungen.
 class TasksSettingsUpdated extends TasksSettingsState {
   TasksSettingsUpdated({
     required super.showCompletedTasks,
@@ -34,11 +32,9 @@ class TasksSettingsUpdated extends TasksSettingsState {
   });
 }
 
-/// Cubit zur Verwaltung der Aufgabenlisten-Einstellungen.
 class TasksSettingsCubit extends Cubit<TasksSettingsState> {
   TasksSettingsCubit() : super(TasksSettingsInitial());
 
-  /// Umschalten der Sichtbarkeit erledigter Aufgaben.
   void toggleShowCompletedTasks(bool value) {
     emit(TasksSettingsUpdated(
       showCompletedTasks: value,
@@ -47,7 +43,6 @@ class TasksSettingsCubit extends Cubit<TasksSettingsState> {
     ));
   }
 
-  /// Hinzufügen eines neuen Tags.
   void addTag(String tag) {
     if (!state.tags.contains(tag)) {
       final updatedTags = List<String>.from(state.tags)..add(tag);
@@ -59,7 +54,6 @@ class TasksSettingsCubit extends Cubit<TasksSettingsState> {
     }
   }
 
-  /// Entfernen eines Tags.
   void removeTag(String tag) {
     if (state.tags.contains(tag)) {
       final updatedTags = List<String>.from(state.tags)..remove(tag);
@@ -71,7 +65,6 @@ class TasksSettingsCubit extends Cubit<TasksSettingsState> {
     }
   }
 
-  /// Bearbeiten eines Tags.
   void editTag(String oldTag, String newTag) {
     if (state.tags.contains(oldTag) && !state.tags.contains(newTag)) {
       final updatedTags = state.tags.map((tag) {
@@ -85,7 +78,6 @@ class TasksSettingsCubit extends Cubit<TasksSettingsState> {
     }
   }
 
-  /// Hinzufügen einer neuen Priorität.
   void addPriority(String priority) {
     if (!state.priorities.contains(priority)) {
       final updatedPriorities = List<String>.from(state.priorities)..add(priority);
@@ -97,7 +89,6 @@ class TasksSettingsCubit extends Cubit<TasksSettingsState> {
     }
   }
 
-  /// Entfernen einer Priorität.
   void removePriority(String priority) {
     if (state.priorities.contains(priority)) {
       final updatedPriorities = List<String>.from(state.priorities)..remove(priority);
@@ -109,7 +100,6 @@ class TasksSettingsCubit extends Cubit<TasksSettingsState> {
     }
   }
 
-  /// Bearbeiten einer Priorität.
   void editPriority(String oldPriority, String newPriority) {
     if (state.priorities.contains(oldPriority) && !state.priorities.contains(newPriority)) {
       final updatedPriorities = state.priorities.map((priority) {
@@ -123,7 +113,6 @@ class TasksSettingsCubit extends Cubit<TasksSettingsState> {
     }
   }
 
-  /// Ändern der Reihenfolge der Prioritäten.
   void reorderPriorities(int oldIndex, int newIndex) {
     final updatedPriorities = List<String>.from(state.priorities);
     if (newIndex > oldIndex) {

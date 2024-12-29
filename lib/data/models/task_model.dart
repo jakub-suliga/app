@@ -15,7 +15,7 @@ class TaskModel {
     required this.id,
     required this.title,
     this.description = '',
-    this.isDone = false,          
+    this.isDone = false,
     this.dueDate,
     this.estimatedDuration,
     this.priority = 0,
@@ -25,7 +25,6 @@ class TaskModel {
     this.repeatMonthly = false,
   });
 
-  // Falls du copyWith brauchst
   TaskModel copyWith({
     String? title,
     String? description,
@@ -42,7 +41,7 @@ class TaskModel {
       id: id,
       title: title ?? this.title,
       description: description ?? this.description,
-      isDone: isDone ?? this.isDone,          // <--
+      isDone: isDone ?? this.isDone,
       dueDate: dueDate ?? this.dueDate,
       estimatedDuration: estimatedDuration ?? this.estimatedDuration,
       priority: priority ?? this.priority,

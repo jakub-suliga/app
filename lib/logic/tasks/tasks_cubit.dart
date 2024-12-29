@@ -29,11 +29,8 @@ class TasksCubit extends Cubit<TasksState> {
     await loadTasks();
   }
 
-  /// Neu: "updateTask" - ändert existierende Task (z. B. isDone)
   Future<void> updateTask(TaskModel task) async {
     await tasksRepo.updateTask(task);
-    // Danach wieder neu laden, damit State aktualisiert
     await loadTasks();
   }
 }
-
