@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'dart:io';
-
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:esense_flutter/esense.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../../logic/settings/settings_cubit.dart';
 
-/// Zeigt ausschließlich 6-Achsen-Sensordaten (IMU) von eSense an.
 class EnvironmentScreen extends StatefulWidget {
   const EnvironmentScreen({Key? key}) : super(key: key);
 
@@ -13,38 +14,82 @@ class EnvironmentScreen extends StatefulWidget {
   State<EnvironmentScreen> createState() => _EnvironmentScreenState();
 }
 
+// Kleine Hilfsklasse, um magnitude + Zeitstempel zu speichern
+class _AccelSample {
+  final double magnitude;
+  final DateTime time;
+  _AccelSample(this.magnitude, this.time);
+}
+
 class _EnvironmentScreenState extends State<EnvironmentScreen> {
-  // Hier kannst du deinen Gerätenamen anpassen oder via SettingsCubit holen.
-  static const String eSenseDeviceName = 'eSense-0629';
+  late ESenseManager eSenseManager;
 
   // eSense
-  late ESenseManager eSenseManager;
   bool _connected = false;
-  String _deviceStatus = '';
-  String _deviceName = 'Unknown';
+  String _deviceStatus = 'disconnected';
+  String _deviceName = 'Unknown'; // Aus eSense selbst ausgelesen
   double _voltage = -1;
   String _button = 'not pressed';
   bool _sampling = false;
-  String _imuDataString = 'Noch keine Sensordaten';
+  String _rawImuDataString = 'keine Daten';
+  StreamSubscription? _connectionSub;
+  StreamSubscription? _eSenseEventsSub;
+  StreamSubscription? _sensorSub;
 
-  StreamSubscription? _sensorSubscription;
-  StreamSubscription? _connectionSubscription;
-  StreamSubscription? _eSenseEventsSubscription;
+  // Bewegungsauswertung
+  final List<_AccelSample> _accelSamples = [];
+  Timer? _movementTimer;
+  String _movementStatus = 'Ruhig';
+  final double _threshold = 1; // Beispiel-Schwellwert
+  final int _windowSeconds = 5;   // Wie viele Sekunden rückwirkend betrachtet
+  final int _analysisInterval = 1; // Analyse-Intervall in Sekunden
+
+  List<double> _accSamples = [];
+  Timer? _analysisTimer;
 
   @override
   void initState() {
     super.initState();
-    eSenseManager = ESenseManager(eSenseDeviceName);
+
+    // Initialisiere den eSenseManager mit dem aktuellen Gerätenamen aus Settings
+    //final userSpecifiedName =
+    //    context.read<SettingsCubit>().state.eSenseDeviceName;
+    final userSpecifiedName = "eSense-0629";
+    eSenseManager = ESenseManager(userSpecifiedName);
+
+    // Verbindung-Listener einrichten
     _listenToESense();
+
+    // Bewegungsauswertung starten
+    _movementTimer = Timer.periodic(
+      Duration(seconds: _analysisInterval),
+      (_) => _processMovement(),
+    );
   }
 
   @override
   void dispose() {
+    _movementTimer?.cancel();
     _pauseListenToSensorEvents();
-    _connectionSubscription?.cancel();
-    _eSenseEventsSubscription?.cancel();
+    _connectionSub?.cancel();
+    _eSenseEventsSub?.cancel();
     eSenseManager.disconnect();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Überwache Änderungen des Gerätenamens aus Settings
+    final newDeviceName = context.read<SettingsCubit>().state.eSenseDeviceName;
+    if (eSenseManager.deviceName != newDeviceName) {
+      setState(() {
+        eSenseManager = ESenseManager(newDeviceName);
+        _connected = false;
+        _deviceStatus = 'disconnected';
+      });
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -52,27 +97,23 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
   // ---------------------------------------------------------------------------
 
   Future<void> _askForPermissions() async {
-    // Bluetooth-Permission anfragen (Android 12+)
     if (!(await Permission.bluetoothScan.request().isGranted &&
         await Permission.bluetoothConnect.request().isGranted)) {
       debugPrint(
-          'WARNING - Keine Bluetooth-Berechtigung. eSense kann nicht verbunden werden.');
+          'WARNING - Bluetooth-Berechtigung fehlt. eSense kann nicht verbunden werden.');
     }
     if (Platform.isAndroid) {
-      // Für manche Geräte evtl. location-Berechtigung nötig
       if (!(await Permission.locationWhenInUse.request().isGranted)) {
         debugPrint(
-            'WARNING - keine Standortberechtigung. eSense kann nicht verbunden werden.');
+            'WARNING - Standort-Berechtigung fehlt. eSense kann nicht verbunden werden.');
       }
     }
   }
 
-  /// Baut Listener für Verbindungsevents auf.
   Future<void> _listenToESense() async {
     await _askForPermissions();
 
-    // Verbindungsevents:
-    _connectionSubscription = eSenseManager.connectionEvents.listen((event) {
+    _connectionSub = eSenseManager.connectionEvents.listen((event) {
       debugPrint('CONNECTION event: $event');
 
       if (event.type == ConnectionType.connected) {
@@ -104,7 +145,6 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
     });
   }
 
-  /// Verbindung starten
   Future<void> _connectToESense() async {
     if (!_connected) {
       debugPrint('Versuche, zu eSense zu verbinden...');
@@ -116,9 +156,8 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
     }
   }
 
-  /// Liest eSense-Events (z.B. DeviceName, Battery, Button, etc.).
   void _listenToESenseEvents() {
-    _eSenseEventsSubscription = eSenseManager.eSenseEvents.listen((event) {
+    _eSenseEventsSub = eSenseManager.eSenseEvents.listen((event) {
       debugPrint('ESENSE event: $event');
 
       setState(() {
@@ -135,7 +174,6 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
                 : 'not pressed';
             break;
           default:
-            // Beschleunigungs-Offsets, Config, etc. - kann man auslesen, falls gebraucht
             break;
         }
       });
@@ -144,45 +182,95 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
     _getESenseProperties();
   }
 
-  /// Liest diverse Infos (Batterie, Name, etc.) mit Verzögerungen aus.
   void _getESenseProperties() {
-    // Batterie alle 10s
     Timer.periodic(
       const Duration(seconds: 10),
-      (timer) => (_connected) ? eSenseManager.getBatteryVoltage() : null,
+      (timer) => _connected ? eSenseManager.getBatteryVoltage() : null,
     );
 
     Timer(const Duration(seconds: 2), () => eSenseManager.getDeviceName());
-    Timer(const Duration(seconds: 3), () => eSenseManager.getAccelerometerOffset());
-    Timer(const Duration(seconds: 4), () => eSenseManager.getAdvertisementAndConnectionInterval());
-    Timer(const Duration(seconds: 15), () => eSenseManager.getSensorConfig());
   }
 
-  /// Startet das Abhören der IMU-Daten
   void _startListenToSensorEvents() {
-    // Frequenz vor dem Start (Beispiel):
-    // eSenseManager.setSamplingRate(10);
+    _sensorSub = eSenseManager.sensorEvents.listen((event) {
+      final ax = event.accel?[0];
+      final ay = event.accel?[1];
+      final az = event.accel?[2];
+      final mag = sqrt(ax! * ax + ay! * ay + az! * az).toDouble();
 
-    _sensorSubscription = eSenseManager.sensorEvents.listen((event) {
-      // "SensorEvent" enthält x,y,z + Gyro, etc.
-      // event.accel, event.gyro
+      _accelSamples.add(_AccelSample(mag, DateTime.now()));
       setState(() {
-        _imuDataString =
-            'Accel: [${event.accel?[0]}, ${event.accel?[1]}, ${event.accel?[2]}]\n'
-            'Gyro: [${event.gyro?[0]}, ${event.gyro?[1]}, ${event.gyro?[2]}]';
+        _rawImuDataString =
+            'Accel: [${ax.toInt()}, ${ay.toInt()}, ${az.toInt()}]';
       });
     });
 
     setState(() {
       _sampling = true;
     });
+    _startMovementAnalysis(); // Start analyzing automatically
   }
 
-  /// Stoppt das Abhören der SensorEvents
   void _pauseListenToSensorEvents() {
-    _sensorSubscription?.cancel();
+    _sensorSub?.cancel();
     setState(() {
       _sampling = false;
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Bewegung in den letzten 5 Sekunden auswerten
+  // ---------------------------------------------------------------------------
+
+  void _processMovement() {
+    if (!_sampling) {
+      _movementStatus = 'Ruhig';
+      setState(() {});
+      return;
+    }
+
+    final now = DateTime.now();
+    _accelSamples.removeWhere(
+      (sample) => sample.time.isBefore(now.subtract(Duration(seconds: _windowSeconds))),
+    );
+
+    if (_accelSamples.isEmpty) {
+      _movementStatus = 'Ruhig';
+    } else {
+      final sum = _accelSamples.fold<double>(0, (prev, s) => prev + s.magnitude);
+      final avg = sum / _accelSamples.length;
+
+      if (avg > _threshold) {
+        _movementStatus = 'Zu viel Bewegung';
+      } else {
+        _movementStatus = 'Ruhig';
+      }
+    }
+
+    setState(() {});
+  }
+
+  // Hilfsfunktion zur Varianzberechnung
+  double _calculateVariance(List<double> data) {
+    if (data.isEmpty) return 0;
+    double mean = data.reduce((a, b) => a + b) / data.length;
+    double sumOfSquaredDiffs =
+        data.map((x) => (x - mean) * (x - mean)).reduce((a, b) => a + b);
+    return sumOfSquaredDiffs / data.length;
+  }
+
+  void _startMovementAnalysis() {
+    _analysisTimer?.cancel();
+    _analysisTimer = Timer.periodic(Duration(seconds: 5), (timer) {
+      double variance = _calculateVariance(_accSamples);
+      setState(() {
+        if (variance < 0.5) {
+          _movementStatus = 'Ruhig';
+        } else {
+          _movementStatus = 'Zu viel Bewegung';
+        }
+      });
+      _accSamples.clear();
     });
   }
 
@@ -194,26 +282,29 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Umgebung (nur eSense IMU)'),
+        title: const Text('Environment - eSense IMU'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('Gerätename (ausgelesen): $_deviceName'),
           Text('Verbindungsstatus: $_deviceStatus'),
+          Text('Gerätename laut eSense: $_deviceName'),
           Text('Batterie: $_voltage V'),
           Text('Button: $_button'),
           const SizedBox(height: 10),
-          Text('IMU-Daten:\n$_imuDataString'),
+          Text('Roh-IMU-Daten: $_rawImuDataString'),
+          const SizedBox(height: 10),
+          Text(
+            'Bewegungsstatus (letzte 5s): $_movementStatus',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 20),
-
           ElevatedButton.icon(
             onPressed: _connectToESense,
             icon: const Icon(Icons.login),
             label: const Text('Verbinden'),
           ),
           const SizedBox(height: 10),
-
           Row(
             children: [
               ElevatedButton(
@@ -222,7 +313,7 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
                     : (!_sampling)
                         ? _startListenToSensorEvents
                         : _pauseListenToSensorEvents,
-                child: Text(!_sampling ? 'Start Sensors' : 'Pause Sensors'),
+                child: Text(!_sampling ? 'Sensor Start' : 'Sensor Stop'),
               ),
               const SizedBox(width: 10),
               ElevatedButton(
@@ -230,6 +321,7 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
                     ? () {
                         eSenseManager.disconnect();
                         setState(() {
+                          _analysisTimer?.cancel();
                           _connected = false;
                           _deviceStatus = 'disconnected';
                         });

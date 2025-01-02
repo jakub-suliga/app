@@ -3,24 +3,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../logic/tasks/tasks_cubit.dart';
 import '../../../data/models/task_model.dart';
 
-// Beispiel: Minimale Implementation. 
-// Du musst selbst Popups für "Bearbeiten" + "Filter" + "BurgerMenu" einbauen.
-
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
-
   @override
   State<TasksScreen> createState() => _TasksScreenState();
 }
 
 class _TasksScreenState extends State<TasksScreen> {
   String searchQuery = '';
-  // Filter: Prio, Tags, ...
   String selectedPrio = 'Alle';
   List<String> selectedTags = [];
-
-  // Beispiel: BurgerMenu-Listen
-  List<String> lists = ['Heute', 'Eingang', 'Arbeit', 'Privat', 'Uni'];
 
   @override
   Widget build(BuildContext context) {
@@ -29,17 +21,12 @@ class _TasksScreenState extends State<TasksScreen> {
         List<TaskModel> tasks = [];
         if (state is TasksLoaded) {
           tasks = state.tasks;
-          // Filter nach searchQuery, prio, tags ...
           tasks = _applyFilters(tasks);
         }
 
         return Scaffold(
           appBar: AppBar(
             title: const Text('Aufgabenliste'),
-            leading: IconButton(
-              icon: const Icon(Icons.menu),
-              onPressed: _openBurgerMenu,
-            ),
             actions: [
               IconButton(
                 icon: const Icon(Icons.search),
@@ -121,37 +108,6 @@ class _TasksScreenState extends State<TasksScreen> {
       default:
         return 'Mittel';
     }
-  }
-
-  void _openBurgerMenu() {
-    // Zeigt Drawer mit Listen
-    showModalBottomSheet(
-      context: context,
-      builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final l in lists)
-                ListTile(
-                  title: Text(l),
-                  onTap: () {
-                    // TODO: Filter tasks by chosen list
-                    Navigator.pop(ctx);
-                  },
-                ),
-              ListTile(
-                leading: const Icon(Icons.add),
-                title: const Text('Neue Liste erstellen'),
-                onTap: () {
-                  // TODO: Eingabe Name & Emoji
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   void _openSearch() async {
