@@ -1,45 +1,69 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 
-// Define the state
 class SettingsState extends Equatable {
   final String eSenseDeviceName;
   final bool showCompletedTasks;
-  final List<String> tags;
   final List<String> priorities;
+
+  // Neue Pomodoro-Einstellungen
+  final Duration pomodoroDuration;
+  final Duration shortBreakDuration;
+  final Duration longBreakDuration;
+  final int sessionsBeforeLongBreak;
+  final bool autoStartNextPomodoro;
 
   const SettingsState({
     required this.eSenseDeviceName,
     required this.showCompletedTasks,
-    required this.tags,
     required this.priorities,
+    this.pomodoroDuration = const Duration(minutes: 25),
+    this.shortBreakDuration = const Duration(minutes: 5),
+    this.longBreakDuration = const Duration(minutes: 15),
+    this.sessionsBeforeLongBreak = 4,
+    this.autoStartNextPomodoro = false,
   });
 
   SettingsState copyWith({
     String? eSenseDeviceName,
     bool? showCompletedTasks,
-    List<String>? tags,
     List<String>? priorities,
+    Duration? pomodoroDuration,
+    Duration? shortBreakDuration,
+    Duration? longBreakDuration,
+    int? sessionsBeforeLongBreak,
+    bool? autoStartNextPomodoro,
   }) {
     return SettingsState(
       eSenseDeviceName: eSenseDeviceName ?? this.eSenseDeviceName,
       showCompletedTasks: showCompletedTasks ?? this.showCompletedTasks,
-      tags: tags ?? this.tags,
       priorities: priorities ?? this.priorities,
+      pomodoroDuration: pomodoroDuration ?? this.pomodoroDuration,
+      shortBreakDuration: shortBreakDuration ?? this.shortBreakDuration,
+      longBreakDuration: longBreakDuration ?? this.longBreakDuration,
+      sessionsBeforeLongBreak: sessionsBeforeLongBreak ?? this.sessionsBeforeLongBreak,
+      autoStartNextPomodoro: autoStartNextPomodoro ?? this.autoStartNextPomodoro,
     );
   }
 
   @override
-  List<Object> get props => [eSenseDeviceName, showCompletedTasks, tags, priorities];
+  List<Object> get props => [
+        eSenseDeviceName,
+        showCompletedTasks,
+        priorities,
+        pomodoroDuration,
+        shortBreakDuration,
+        longBreakDuration,
+        sessionsBeforeLongBreak,
+        autoStartNextPomodoro,
+      ];
 }
 
-// Define the Cubit
 class SettingsCubit extends Cubit<SettingsState> {
   SettingsCubit()
       : super(const SettingsState(
           eSenseDeviceName: 'DefaultDeviceName',
           showCompletedTasks: true,
-          tags: [],
           priorities: [],
         ));
 
@@ -49,21 +73,6 @@ class SettingsCubit extends Cubit<SettingsState> {
 
   void toggleShowCompletedTasks(bool value) {
     emit(state.copyWith(showCompletedTasks: value));
-  }
-
-  void addTag(String tag) {
-    final updatedTags = List<String>.from(state.tags)..add(tag);
-    emit(state.copyWith(tags: updatedTags));
-  }
-
-  void removeTag(String tag) {
-    final updatedTags = List<String>.from(state.tags)..remove(tag);
-    emit(state.copyWith(tags: updatedTags));
-  }
-
-  void editTag(String oldTag, String newTag) {
-    final updatedTags = state.tags.map((tag) => tag == oldTag ? newTag : tag).toList();
-    emit(state.copyWith(tags: updatedTags));
   }
 
   void addPriority(String priority) {
@@ -86,5 +95,27 @@ class SettingsCubit extends Cubit<SettingsState> {
     final item = updatedPriorities.removeAt(oldIndex);
     updatedPriorities.insert(newIndex, item);
     emit(state.copyWith(priorities: updatedPriorities));
+  }
+
+  // Neue Methoden zur Verwaltung der Pomodoro-Einstellungen
+
+  void setPomodoroDuration(Duration duration) {
+    emit(state.copyWith(pomodoroDuration: duration));
+  }
+
+  void setShortBreakDuration(Duration duration) {
+    emit(state.copyWith(shortBreakDuration: duration));
+  }
+
+  void setLongBreakDuration(Duration duration) {
+    emit(state.copyWith(longBreakDuration: duration));
+  }
+
+  void setSessionsBeforeLongBreak(int sessions) {
+    emit(state.copyWith(sessionsBeforeLongBreak: sessions));
+  }
+
+  void toggleAutoStartNextPomodoro(bool value) {
+    emit(state.copyWith(autoStartNextPomodoro: value));
   }
 }

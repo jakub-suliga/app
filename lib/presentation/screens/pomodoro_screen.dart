@@ -33,10 +33,31 @@ class _PomodoroScreen extends State<PomodoroScreen> {
   @override
   void initState() {
     super.initState();
-    timer = PomoTimer(_onTimerUpdate)
-      ..currentTime = PomoTimer.SESSION_TIME;
+    final settings = context.read<SettingsCubit>().state;
+    timer = PomoTimer(
+      onTimerUpdate: _onTimerUpdate,
+      pomodoroDuration: settings.pomodoroDuration,
+      shortBreakDuration: settings.shortBreakDuration,
+      longBreakDuration: settings.longBreakDuration,
+      sessionsBeforeLongBreak: settings.sessionsBeforeLongBreak,
+      autoStartNextPomodoro: settings.autoStartNextPomodoro,
+      onSessionComplete: _handleSessionComplete,
+    );
 
     _initializeESenseService();
+
+    // Listener für Änderungen der Einstellungen
+    context.read<SettingsCubit>().stream.listen((settings) {
+      setState(() {
+        timer.updateSettings(
+          pomodoroDuration: settings.pomodoroDuration,
+          shortBreakDuration: settings.shortBreakDuration,
+          longBreakDuration: settings.longBreakDuration,
+          sessionsBeforeLongBreak: settings.sessionsBeforeLongBreak,
+          autoStartNextPomodoro: settings.autoStartNextPomodoro,
+        );
+      });
+    });
   }
 
   @override
@@ -87,6 +108,24 @@ class _PomodoroScreen extends State<PomodoroScreen> {
     }
   }
 
+  // Neue Methode zur Behandlung des Abschlusses einer Session oder Pause
+  void _handleSessionComplete(bool isSession) {
+    if (isSession) {
+      // Eine Pomodoro-Session ist beendet
+      timer.incrementCompletedSessions();
+      if (timer.shouldTakeLongBreak()) {
+        timer.startBreak(isLong: true);
+      } else {
+        timer.startBreak(isLong: false);
+      }
+    } else {
+      // Eine Pause ist beendet
+      if (timer.autoStartNextPomodoro) {
+        timer.start();
+      }
+    }
+  }
+
   void _startTimer() {
     if (_selectedTaskId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -132,8 +171,10 @@ class _PomodoroScreen extends State<PomodoroScreen> {
                 Navigator.of(context).pop();
                 if (isSession) {
                   // Starte automatisch die Pause
-                  timer.startBreak();
-                  _eSenseService.startSensors();
+                  timer.startBreak(isLong: timer.shouldTakeLongBreak());
+                  if (_eSenseService.deviceStatus == 'Connected') {
+                    _eSenseService.startSensors();
+                  }
                 }
               },
             ),
@@ -411,19 +452,37 @@ class RadialPainter extends CustomPainter {
   }
 }
 
+/// Aktualisierte PomoTimer-Klasse mit dynamischen Einstellungen
 class PomoTimer {
-  static const SESSION_TIME = Duration(minutes: 25);
-  static const BREAK_TIME = Duration(minutes: 5);
-  bool isBreak = false;
   final Function onTimerUpdate;
+  final Function(bool isSession) onSessionComplete;
+  Duration pomodoroDuration;
+  Duration shortBreakDuration;
+  Duration longBreakDuration;
+  int sessionsBeforeLongBreak;
+  bool autoStartNextPomodoro;
+
+  bool isBreak = false;
+  final Stopwatch _stopwatch = Stopwatch();
+  Timer? _internalTimer;
+
   Duration _currentTime;
   Duration startTime;
-  final Stopwatch _stopwatch = Stopwatch();
-  Timer? _internalTimer; // Interner Timer zum Verfolgen des Timers
 
-  PomoTimer(this.onTimerUpdate)
-      : _currentTime = SESSION_TIME,
-        startTime = SESSION_TIME;
+  int _completedSessions = 0;
+
+  bool get isRunning => _stopwatch.isRunning;
+
+  PomoTimer({
+    required this.onTimerUpdate,
+    required this.pomodoroDuration,
+    required this.shortBreakDuration,
+    required this.longBreakDuration,
+    required this.sessionsBeforeLongBreak,
+    required this.autoStartNextPomodoro,
+    required this.onSessionComplete,
+  })  : _currentTime = pomodoroDuration,
+        startTime = pomodoroDuration;
 
   Duration get currentTime => _currentTime;
 
@@ -433,20 +492,28 @@ class PomoTimer {
     return '$minutes:$seconds';
   }
 
-  bool get isRunning => _stopwatch.isRunning;
-
   void start() {
     if (_stopwatch.isRunning) return;
     isBreak = false;
-    currentTime = SESSION_TIME;
+    _currentTime = pomodoroDuration;
+    startTime = pomodoroDuration;
     _run();
   }
 
-  void startBreak() {
+  void startBreak({required bool isLong}) {
     if (_stopwatch.isRunning) return;
     isBreak = true;
-    currentTime = BREAK_TIME;
+    _currentTime = isLong ? longBreakDuration : shortBreakDuration;
+    startTime = _currentTime;
     _run();
+  }
+
+  void incrementCompletedSessions() {
+    _completedSessions += 1;
+  }
+
+  bool shouldTakeLongBreak() {
+    return _completedSessions % sessionsBeforeLongBreak == 0;
   }
 
   void _run() {
@@ -462,21 +529,10 @@ class PomoTimer {
       _internalTimer = Timer(const Duration(seconds: 1), _timerCallback);
     } else {
       _stopwatch.stop();
-      // Timer abgelaufen, Aktion nach Beendigung der Session/Break
-
-      if (startTime == SESSION_TIME && _currentTime.inSeconds <= 0 && !isBreak) {
-        print("Session beendet! Zeit für eine Pause.");
-
-        // Nach einer kurzen Verzögerung zur Simulation der Pause
-        await Future.delayed(const Duration(seconds: 1));
-        isBreak = true;
-        currentTime = BREAK_TIME;
-        onTimerUpdate();
-        _timerCallback(); // Starte die Pause
-      } else if (startTime == BREAK_TIME && _currentTime.inSeconds <= 0 && isBreak) {
-        print("Pause beendet! Zeit für eine neue Session.");
-        onTimerUpdate();
-        // Optionale Logik für den Start einer neuen Session hinzufügen
+      if (!isBreak) {
+        onSessionComplete(true); // Session abgeschlossen
+      } else {
+        onSessionComplete(false); // Pause abgeschlossen
       }
     }
 
@@ -487,8 +543,10 @@ class PomoTimer {
     _internalTimer?.cancel(); // Stoppe den internen Timer
     _stopwatch.stop();
     _stopwatch.reset();
-    currentTime = SESSION_TIME;
     isBreak = false;
+    _currentTime = pomodoroDuration;
+    startTime = pomodoroDuration;
+    _completedSessions = 0;
     onTimerUpdate();
   }
 
@@ -497,7 +555,36 @@ class PomoTimer {
     _stopwatch.stop();
   }
 
-  set currentTime(Duration time) {
-    startTime = _currentTime = time;
+  void updateSettings({
+    Duration? pomodoroDuration,
+    Duration? shortBreakDuration,
+    Duration? longBreakDuration,
+    int? sessionsBeforeLongBreak,
+    bool? autoStartNextPomodoro,
+  }) {
+    if (pomodoroDuration != null) {
+      this.pomodoroDuration = pomodoroDuration;
+    }
+    if (shortBreakDuration != null) {
+      this.shortBreakDuration = shortBreakDuration;
+    }
+    if (longBreakDuration != null) {
+      this.longBreakDuration = longBreakDuration;
+    }
+    if (sessionsBeforeLongBreak != null) {
+      this.sessionsBeforeLongBreak = sessionsBeforeLongBreak;
+    }
+    if (autoStartNextPomodoro != null) {
+      this.autoStartNextPomodoro = autoStartNextPomodoro;
+    }
+
+    // Falls der Timer gerade läuft, aktualisiere die Startzeit entsprechend
+    if (isRunning) {
+      if (isBreak) {
+        startTime = _currentTime;
+      } else {
+        startTime = _currentTime;
+      }
+    }
   }
 }

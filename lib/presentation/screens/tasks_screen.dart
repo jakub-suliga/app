@@ -1,3 +1,5 @@
+// lib/screens/tasks_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../logic/tasks/tasks_cubit.dart';
@@ -12,7 +14,7 @@ class TasksScreen extends StatefulWidget {
 class _TasksScreenState extends State<TasksScreen> {
   String searchQuery = '';
   String selectedPrio = 'Alle';
-  List<String> selectedTags = [];
+  // List<String> selectedTags = []; // Entfernt
 
   @override
   Widget build(BuildContext context) {
@@ -71,15 +73,16 @@ class _TasksScreenState extends State<TasksScreen> {
   }
 
   List<TaskModel> _applyFilters(List<TaskModel> tasks) {
-    // Z.B. Search by title
+    // Search by title
     if (searchQuery.isNotEmpty) {
       tasks = tasks.where((t) => t.title.toLowerCase().contains(searchQuery.toLowerCase())).toList();
     }
-    // Filter by prio
+    // Filter by priority
     if (selectedPrio != 'Alle') {
       tasks = tasks.where((t) => _prioName(t.priority) == selectedPrio).toList();
     }
-    // Filter by tags
+    // Filter by tags - Entfernt
+    /*
     if (selectedTags.isNotEmpty) {
       tasks = tasks.where((t) {
         for (final tag in selectedTags) {
@@ -88,15 +91,16 @@ class _TasksScreenState extends State<TasksScreen> {
         return false;
       }).toList();
     }
+    */
     return tasks;
   }
 
   String _taskSubtitle(TaskModel task) {
-    // Du kannst Deadline, Prio, Tags, etc. anzeigen
+    // Anzeige von Deadline und Priorität
     final prioText = _prioName(task.priority);
-    final tagText = task.tags.isEmpty ? '' : '#${task.tags.join(' #')}';
+    // final tagText = task.tags.isEmpty ? '' : '#${task.tags.join(' #')}'; // Entfernt
     final due = task.dueDate != null ? 'Fällig: ${task.dueDate}' : '';
-    return '$due | Prio: $prioText | $tagText';
+    return '$due | Prio: $prioText';
   }
 
   String _prioName(int priority) {
@@ -137,12 +141,11 @@ class _TasksScreenState extends State<TasksScreen> {
   }
 
   void _openFilterDialog() async {
-    // Filter nach Prio & Tags
-    // Demo: Nur Prio
+    // Filter nach Priorität
     await showDialog(
       context: context,
       builder: (ctx) {
-        String selected = selectedPrio; // copy
+        String selected = selectedPrio; // Kopie
         return AlertDialog(
           title: const Text('Filter'),
           content: DropdownButton<String>(
@@ -174,8 +177,7 @@ class _TasksScreenState extends State<TasksScreen> {
   }
 
   void _createTask() {
-    // BottomSheet oder Popup, Icons nur, etc.
-    // Hier stark vereinfacht
+    // BottomSheet oder Popup
     showModalBottomSheet(
       context: context,
       builder: (ctx) => const _TaskCreationSheet(),
@@ -183,8 +185,7 @@ class _TasksScreenState extends State<TasksScreen> {
   }
 
   void _editTask(TaskModel task) {
-    // Ähnlich wie create, aber mit vorhandenen Daten
-    // Popup zum Bearbeiten
+    // Implementieren Sie das Bearbeiten einer Aufgabe hier, falls gewünscht
   }
 }
 
@@ -199,7 +200,7 @@ class _TaskCreationSheet extends StatefulWidget {
 class _TaskCreationSheetState extends State<_TaskCreationSheet> {
   String title = '';
   String description = '';
-  List<String> tags = [];
+  // List<String> tags = []; // Entfernt
   int priority = 1; // 0=niedrig,1=mittel,2=hoch
   bool repeatDaily = false;
   // etc.
@@ -229,13 +230,17 @@ class _TaskCreationSheetState extends State<_TaskCreationSheet> {
                 IconButton(
                   icon: const Icon(Icons.repeat),
                   onPressed: () {
-                    // toggle repeat...
+                    setState(() {
+                      repeatDaily = !repeatDaily;
+                    });
                   },
                 ),
                 IconButton(
                   icon: const Icon(Icons.priority_high),
                   onPressed: _choosePrio,
                 ),
+                // Entfernen der Tag- und Listen-Buttons
+                /*
                 IconButton(
                   icon: const Icon(Icons.tag),
                   onPressed: _chooseTag,
@@ -244,6 +249,7 @@ class _TaskCreationSheetState extends State<_TaskCreationSheet> {
                   icon: const Icon(Icons.list_alt),
                   onPressed: _chooseList,
                 ),
+                */
               ],
             ),
             TextField(
@@ -293,13 +299,7 @@ class _TaskCreationSheetState extends State<_TaskCreationSheet> {
     }
   }
 
-  void _chooseTag() {
-    // Popup, Liste vorhandener Tags, Button "Neuen Tag erstellen" etc.
-  }
-
-  void _chooseList() {
-    // Popup mit vorhandenen Listen + "Neue Liste" Button
-  }
+  // Entfernen der Methoden _chooseTag und _chooseList
 
   void _saveTask() {
     final newTask = TaskModel(
@@ -307,7 +307,7 @@ class _TaskCreationSheetState extends State<_TaskCreationSheet> {
       title: title,
       description: description,
       // parse tags from title or special logic
-      tags: tags,
+      // tags: tags, // Entfernt
       priority: priority,
       repeatDaily: repeatDaily,
       // ...

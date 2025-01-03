@@ -6,7 +6,7 @@ class TaskModel {
   final DateTime? dueDate;
   final Duration? estimatedDuration;
   final int priority;   // 0 = niedrig, 1 = mittel, 2 = hoch
-  final List<String> tags;
+  // final List<String> tags; // Entfernt
   final bool repeatDaily;
   final bool repeatWeekly;
   final bool repeatMonthly;
@@ -19,7 +19,7 @@ class TaskModel {
     this.dueDate,
     this.estimatedDuration,
     this.priority = 0,
-    this.tags = const [],
+    // this.tags = const [], // Entfernt
     this.repeatDaily = false,
     this.repeatWeekly = false,
     this.repeatMonthly = false,
@@ -32,7 +32,7 @@ class TaskModel {
     DateTime? dueDate,
     Duration? estimatedDuration,
     int? priority,
-    List<String>? tags,
+    // List<String>? tags, // Entfernt
     bool? repeatDaily,
     bool? repeatWeekly,
     bool? repeatMonthly,
@@ -45,7 +45,6 @@ class TaskModel {
       dueDate: dueDate ?? this.dueDate,
       estimatedDuration: estimatedDuration ?? this.estimatedDuration,
       priority: priority ?? this.priority,
-      tags: tags ?? this.tags,
       repeatDaily: repeatDaily ?? this.repeatDaily,
       repeatWeekly: repeatWeekly ?? this.repeatWeekly,
       repeatMonthly: repeatMonthly ?? this.repeatMonthly,
