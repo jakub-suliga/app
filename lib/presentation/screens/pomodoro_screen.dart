@@ -1,22 +1,23 @@
-// lib/screens/pomodoro_screen.dart
+// lib/presentation/screens/pomodoro_screen.dart
 
 import 'dart:math';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import '../../logic/tasks/tasks_cubit.dart';
 import '../../data/models/task_model.dart';
-import '../../service/eSenseService.dart'; // Korrigierter Importpfad
-import '../../logic/settings/settings_cubit.dart'; // Stelle sicher, dass SettingsCubit importiert ist
+import '../../logic/settings/settings_cubit.dart';
+import '../../service/eSenseService.dart'; // Stellen Sie sicher, dass dieser Pfad korrekt ist
 
 class PomodoroScreen extends StatefulWidget {
-  const PomodoroScreen({super.key});
+  const PomodoroScreen({Key? key}) : super(key: key);
 
   @override
-  _PomodoroScreen createState() => _PomodoroScreen();
+  _PomodoroScreenState createState() => _PomodoroScreenState();
 }
 
-class _PomodoroScreen extends State<PomodoroScreen> {
+class _PomodoroScreenState extends State<PomodoroScreen> {
   late PomoTimer timer;
   double _currentSessionProgress = 0.0;
   Color accent = const Color(0xFFF09E8C);
@@ -27,6 +28,8 @@ class _PomodoroScreen extends State<PomodoroScreen> {
   String _movementStatus = 'Ruhig';
 
   late StreamSubscription<String> _movementSub;
+
+  TaskModel? _nextTask; // Variable für die nächste Aufgabe
 
   @override
   void initState() {
@@ -56,6 +59,22 @@ class _PomodoroScreen extends State<PomodoroScreen> {
         );
       });
     });
+
+    // Listener für Änderungen der Aufgabenliste
+    context.read<TasksCubit>().stream.listen((state) {
+      if (state is TasksLoaded) {
+        setState(() {
+          _nextTask = context.read<TasksCubit>().getNextTask();
+          _selectedTaskId = _nextTask?.id ?? '';
+        });
+      }
+    });
+
+    // Initiale Bestimmung der nächsten Aufgabe
+    if (context.read<TasksCubit>().state is TasksLoaded) {
+      _nextTask = context.read<TasksCubit>().getNextTask();
+      _selectedTaskId = _nextTask?.id ?? '';
+    }
   }
 
   @override
@@ -114,15 +133,22 @@ class _PomodoroScreen extends State<PomodoroScreen> {
         timer.start();
       }
     }
+
+    // Aktualisiere die nächste Aufgabe nach dem Abschluss
+    setState(() {
+      _nextTask = context.read<TasksCubit>().getNextTask();
+      _selectedTaskId = _nextTask?.id ?? '';
+    });
   }
 
   void _startTimer() {
     if (_selectedTaskId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bitte wähle eine Aufgabe aus.')),
+        const SnackBar(content: Text('Keine bevorstehende Aufgabe ausgewählt.')),
       );
       return;
     }
+
     timer.start();
 
     // Starte die Sensoren gleichzeitig
@@ -212,23 +238,68 @@ class _PomodoroScreen extends State<PomodoroScreen> {
     }
   }
 
+  /// Methode zur Anzeige der nächsten Aufgabe
+  Widget _nextTaskDisplay() {
+    if (_nextTask == null) {
+      return const Text(
+        'Keine bevorstehende Aufgabe.',
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      );
+    } else {
+      return Card(
+        color: Colors.blue.shade50,
+        child: ListTile(
+          title: Text(
+            'Nächste Aufgabe: ${_nextTask!.title}',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_nextTask!.endDate != null)
+                Text('Fällig bis: ${DateFormat.yMd().format(_nextTask!.endDate!)}'),
+              Text('Priorität: ${_nextTask!.priority}'),
+              Text('Dauer: ${_formatDuration(_nextTask!.duration)}'),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    return '${hours}h ${minutes}m';
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
           title: const Text('Pomodoro Timer'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.list),
+              onPressed: () {
+                Navigator.pushNamed(context, '/tasks');
+              },
+              tooltip: 'Aufgabenliste',
+            ),
+          ],
         ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(5.0, 30.0, 5.0, 15.0),
           child: Column(
             children: <Widget>[
               _movementInstruction(), // Bewegungsanweisungen anzeigen
+              const SizedBox(height: 10),
+              _nextTaskDisplay(), // Anzeige der nächsten Aufgabe
               const SizedBox(height: 20),
               _timerWidget(),
               const SizedBox(height: 20),
               _taskDropdown(),
               const SizedBox(height: 20),
               _control(),
-              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -376,14 +447,14 @@ class RadialProgressBar extends StatelessWidget {
   final Widget? child; // Macht das Kind optional
 
   const RadialProgressBar({
-    super.key,
+    Key? key,
     required this.progressPercent,
     required this.progressColor,
     required this.trackColor,
     this.trackWidth = 10.0,
     this.progressWidth = 10.0,
     this.child, // Entferne 'required'
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

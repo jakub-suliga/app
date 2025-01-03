@@ -9,6 +9,7 @@ import '../../logic/settings/settings_cubit.dart';
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
+  
   @override
   State<TasksScreen> createState() => _TasksScreenState();
 }
@@ -153,10 +154,7 @@ class _TasksScreenState extends State<TasksScreen> {
   }
 }
 
-
-// lib/widgets/add_task_dialog.dart
-
-
+/// AddTaskDialog Widget
 class AddTaskDialog extends StatefulWidget {
   const AddTaskDialog({Key? key}) : super(key: key);
 
@@ -394,10 +392,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   }
 }
 
-
-// lib/widgets/task_list.dart
-
-
+/// TaskList Widget
 class TaskList extends StatelessWidget {
   const TaskList({Key? key}) : super(key: key);
 
@@ -475,4 +470,3 @@ class TaskList extends StatelessWidget {
     // Beispielsweise durch Öffnen eines ähnlichen Dialogs wie AddTaskDialog mit vorgefüllten Werten
   }
 }
-
