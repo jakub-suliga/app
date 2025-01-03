@@ -1,3 +1,5 @@
+// lib/logic/settings/settings_cubit.dart
+
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 
@@ -64,7 +66,7 @@ class SettingsCubit extends Cubit<SettingsState> {
       : super(const SettingsState(
           eSenseDeviceName: 'DefaultDeviceName',
           showCompletedTasks: true,
-          priorities: [],
+          priorities: ['Hoch', 'Normal', 'Niedrig'], // Standardprioritäten
         ));
 
   void setESenseDeviceName(String newName) {
@@ -76,13 +78,17 @@ class SettingsCubit extends Cubit<SettingsState> {
   }
 
   void addPriority(String priority) {
-    final updatedPriorities = List<String>.from(state.priorities)..add(priority);
-    emit(state.copyWith(priorities: updatedPriorities));
+    if (!state.priorities.contains(priority)) {
+      final updatedPriorities = List<String>.from(state.priorities)..add(priority);
+      emit(state.copyWith(priorities: updatedPriorities));
+    }
   }
 
   void removePriority(String priority) {
-    final updatedPriorities = List<String>.from(state.priorities)..remove(priority);
-    emit(state.copyWith(priorities: updatedPriorities));
+    if (state.priorities.contains(priority)) {
+      final updatedPriorities = List<String>.from(state.priorities)..remove(priority);
+      emit(state.copyWith(priorities: updatedPriorities));
+    }
   }
 
   void editPriority(String oldPriority, String newPriority) {

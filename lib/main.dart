@@ -29,7 +29,7 @@ void main() {
     MultiBlocProvider(
       providers: [
         BlocProvider<TasksCubit>(
-          create: (_) => TasksCubit(tasksRepo: tasksRepo)..loadTasks(),
+          create: (_) => TasksCubit()..loadTasks(),
         ),
         BlocProvider<ThemeCubit>(
           create: (_) => ThemeCubit(),

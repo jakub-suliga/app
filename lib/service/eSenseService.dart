@@ -228,7 +228,7 @@ class ESenseService {
 
             if (stdDev > _movementThreshold && stdDev < _maxStdDev) {
               debugPrint('Bewegung erkannt.');
-              _updateMovementStatus('Man bewegt sich');
+              _updateMovementStatus('Bewegung');
             } else if (stdDev <= _movementThreshold) {
               debugPrint('Keine Bewegung erkannt.');
               _updateMovementStatus('Ruhig');

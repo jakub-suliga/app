@@ -25,10 +25,8 @@ class _PomodoroScreen extends State<PomodoroScreen> {
   // eSense-Variablen
   final ESenseService _eSenseService = ESenseService();
   String _movementStatus = 'Ruhig';
-  String _buttonStatus = 'Nicht gedrückt';
 
   late StreamSubscription<String> _movementSub;
-  late StreamSubscription<String> _buttonSub;
 
   @override
   void initState() {
@@ -64,7 +62,6 @@ class _PomodoroScreen extends State<PomodoroScreen> {
   void dispose() {
     timer.dispose(); // Dispose des Timers
     _movementSub.cancel();
-    _buttonSub.cancel();
     _eSenseService.dispose(); // Dispose des ESenseService
     super.dispose();
   }
@@ -78,13 +75,6 @@ class _PomodoroScreen extends State<PomodoroScreen> {
     _movementSub = _eSenseService.movementStatusStream.listen((status) {
       setState(() {
         _movementStatus = status;
-      });
-    });
-
-    // Listener für Button-Status
-    _buttonSub = _eSenseService.buttonStatusStream.listen((status) {
-      setState(() {
-        _buttonStatus = status;
       });
     });
   }
@@ -189,6 +179,39 @@ class _PomodoroScreen extends State<PomodoroScreen> {
     }
   }
 
+  /// Methode zur Anzeige der Bewegungsanweisungen
+  Widget _movementInstruction() {
+    if (timer.isRunning && !timer.isBreak) {
+      // Während einer Pomodoro-Einheit
+      if (_movementStatus == 'Bewegung') {
+        return Text(
+          'Bitte fokussieren Sie sich mehr und lenken Sie sich weniger ab.',
+          style: TextStyle(color: Colors.red, fontSize: 16),
+        );
+      } else {
+        return const Text(
+          'Focus Time!',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        );
+      }
+    } else if (timer.isBreak) {
+      // Während einer Pause
+      if (_movementStatus == 'Ruhig') {
+        return Text(
+          'Bitte bewegen Sie sich mehr.',
+          style: TextStyle(color: Colors.red, fontSize: 16),
+        );
+      } else {
+        return const Text(
+          'Aktiviere jetzt den Körper!',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        );
+      }
+    } else {
+      return Container(); // Leeres Container, wenn nichts angezeigt werden soll
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
@@ -198,7 +221,7 @@ class _PomodoroScreen extends State<PomodoroScreen> {
           padding: const EdgeInsets.fromLTRB(5.0, 30.0, 5.0, 15.0),
           child: Column(
             children: <Widget>[
-              _movementStatusDisplay(), // Bewegungsstatus anzeigen
+              _movementInstruction(), // Bewegungsanweisungen anzeigen
               const SizedBox(height: 20),
               _timerWidget(),
               const SizedBox(height: 20),
@@ -206,27 +229,8 @@ class _PomodoroScreen extends State<PomodoroScreen> {
               const SizedBox(height: 20),
               _control(),
               const SizedBox(height: 20),
-              _buttonStatusDisplay(), // Button-Status anzeigen
             ],
           ),
-        ),
-      );
-
-  // Anzeige des Bewegungsstatus
-  Widget _movementStatusDisplay() => Align(
-        alignment: Alignment.centerLeft,
-        child: Text(
-          'Bewegungsstatus: $_movementStatus',
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-      );
-
-  // Anzeige des Button-Status
-  Widget _buttonStatusDisplay() => Align(
-        alignment: Alignment.centerLeft,
-        child: Text(
-          'Button: $_buttonStatus',
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       );
 
@@ -580,11 +584,7 @@ class PomoTimer {
 
     // Falls der Timer gerade läuft, aktualisiere die Startzeit entsprechend
     if (isRunning) {
-      if (isBreak) {
-        startTime = _currentTime;
-      } else {
-        startTime = _currentTime;
-      }
+      startTime = _currentTime;
     }
   }
 }

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../logic/tasks/tasks_cubit.dart';
 import '../../../data/models/task_model.dart';
+import 'package:intl/intl.dart';
+import '../../logic/settings/settings_cubit.dart';
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
@@ -42,27 +44,7 @@ class _TasksScreenState extends State<TasksScreen> {
           ),
           body: (state is TasksLoading)
               ? const Center(child: CircularProgressIndicator())
-              : ListView.builder(
-                  itemCount: tasks.length,
-                  itemBuilder: (context, index) {
-                    final task = tasks[index];
-                    return ListTile(
-                      leading: Checkbox(
-                        value: task.isDone ?? false,
-                        onChanged: (val) {
-                          // Abgehakt => Cubit: updateTask
-                          final updatedTask = task.copyWith(isDone: val ?? false);
-                          context.read<TasksCubit>().updateTask(updatedTask);
-                        },
-                      ),
-                      title: GestureDetector(
-                        onTap: () => _editTask(task),
-                        child: Text(task.title),
-                      ),
-                      subtitle: Text(_taskSubtitle(task)),
-                    );
-                  },
-                ),
+              : TaskList(), // Verwenden Sie das separate TaskList-Widget
           floatingActionButton: FloatingActionButton(
             onPressed: _createTask,
             child: const Icon(Icons.add),
@@ -79,7 +61,7 @@ class _TasksScreenState extends State<TasksScreen> {
     }
     // Filter by priority
     if (selectedPrio != 'Alle') {
-      tasks = tasks.where((t) => _prioName(t.priority) == selectedPrio).toList();
+      tasks = tasks.where((t) => t.priority == selectedPrio).toList();
     }
     // Filter by tags - Entfernt
     /*
@@ -93,25 +75,6 @@ class _TasksScreenState extends State<TasksScreen> {
     }
     */
     return tasks;
-  }
-
-  String _taskSubtitle(TaskModel task) {
-    // Anzeige von Deadline und Priorität
-    final prioText = _prioName(task.priority);
-    // final tagText = task.tags.isEmpty ? '' : '#${task.tags.join(' #')}'; // Entfernt
-    final due = task.dueDate != null ? 'Fällig: ${task.dueDate}' : '';
-    return '$due | Prio: $prioText';
-  }
-
-  String _prioName(int priority) {
-    switch (priority) {
-      case 2:
-        return 'Hoch';
-      case 0:
-        return 'Niedrig';
-      default:
-        return 'Mittel';
-    }
   }
 
   void _openSearch() async {
@@ -153,7 +116,7 @@ class _TasksScreenState extends State<TasksScreen> {
             items: const [
               DropdownMenuItem(value: 'Alle', child: Text('Alle')),
               DropdownMenuItem(value: 'Hoch', child: Text('Hoch')),
-              DropdownMenuItem(value: 'Mittel', child: Text('Mittel')),
+              DropdownMenuItem(value: 'Normal', child: Text('Normal')),
               DropdownMenuItem(value: 'Niedrig', child: Text('Niedrig')),
             ],
             onChanged: (val) {
@@ -177,142 +140,339 @@ class _TasksScreenState extends State<TasksScreen> {
   }
 
   void _createTask() {
-    // BottomSheet oder Popup
-    showModalBottomSheet(
+    // Öffnen Sie den AddTaskDialog
+    showDialog(
       context: context,
-      builder: (ctx) => const _TaskCreationSheet(),
+      builder: (context) => const AddTaskDialog(),
     );
   }
 
   void _editTask(TaskModel task) {
     // Implementieren Sie das Bearbeiten einer Aufgabe hier, falls gewünscht
+    // Beispielsweise durch Öffnen eines ähnlichen Dialogs wie AddTaskDialog mit vorgefüllten Werten
   }
 }
 
-// Ein vereinfachtes BottomSheet:
-class _TaskCreationSheet extends StatefulWidget {
-  const _TaskCreationSheet();
+
+// lib/widgets/add_task_dialog.dart
+
+
+class AddTaskDialog extends StatefulWidget {
+  const AddTaskDialog({Key? key}) : super(key: key);
 
   @override
-  State<_TaskCreationSheet> createState() => _TaskCreationSheetState();
+  _AddTaskDialogState createState() => _AddTaskDialogState();
 }
 
-class _TaskCreationSheetState extends State<_TaskCreationSheet> {
-  String title = '';
-  String description = '';
-  // List<String> tags = []; // Entfernt
-  int priority = 1; // 0=niedrig,1=mittel,2=hoch
-  bool repeatDaily = false;
-  // etc.
+class _AddTaskDialogState extends State<AddTaskDialog> {
+  final _formKey = GlobalKey<FormState>();
+
+  String _title = '';
+  String _description = '';
+  DateTime? _endDate;
+  String _priority = 'Normal'; // Standardpriorität
+  int _durationHours = 0;
+  int _durationMinutes = 25; // Standard-Pomodoro-Dauer
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 16,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Title
-            TextField(
-              decoration: const InputDecoration(hintText: 'Titel'),
-              onChanged: (val) {
-                setState(() {
-                  title = val;
-                  // Bei #... => tag extrahieren
-                });
-              },
-            ),
-            // Icons: [Wiederholen], [Prio], [Tags], [Liste]
-            Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.repeat),
-                  onPressed: () {
-                    setState(() {
-                      repeatDaily = !repeatDaily;
-                    });
-                  },
+    final settingsState = context.watch<SettingsCubit>().state;
+    final priorities = settingsState.priorities; // Annahme: Prioritäten sind Strings
+
+    return AlertDialog(
+      title: const Text('Neue Aufgabe erstellen'),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              // Titel
+              TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Titel',
+                  border: OutlineInputBorder(),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.priority_high),
-                  onPressed: _choosePrio,
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Titel ist erforderlich.' : null,
+                onSaved: (value) => _title = value!,
+              ),
+              const SizedBox(height: 10),
+              
+              // Beschreibung
+              TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Beschreibung',
+                  border: OutlineInputBorder(),
                 ),
-                // Entfernen der Tag- und Listen-Buttons
-                /*
-                IconButton(
-                  icon: const Icon(Icons.tag),
-                  onPressed: _chooseTag,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.list_alt),
-                  onPressed: _chooseList,
-                ),
-                */
-              ],
-            ),
-            TextField(
-              decoration: const InputDecoration(hintText: 'Beschreibung'),
-              onChanged: (val) => description = val,
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: title.isEmpty ? null : _saveTask,
-              child: const Text('Speichern'),
-            ),
-            const SizedBox(height: 10),
-          ],
+                maxLines: 3,
+                onSaved: (value) => _description = value ?? '',
+              ),
+              const SizedBox(height: 10),
+              
+              // Enddatum
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _endDate == null
+                          ? 'Kein Enddatum ausgewählt.'
+                          : 'Enddatum: ${DateFormat.yMd().format(_endDate!)}',
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _pickEndDate,
+                    child: const Text('Enddatum wählen'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // Priorität
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(
+                        labelText: 'Priorität',
+                        border: OutlineInputBorder(),
+                      ),
+                      value: _priority,
+                      items: priorities.map((priority) {
+                        return DropdownMenuItem<String>(
+                          value: priority,
+                          child: Text(priority),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _priority = value!;
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  TextButton(
+                    onPressed: _addNewPriority,
+                    child: const Text('Priorität hinzufügen'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // Dauer
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: 'Stunden',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                      initialValue: '0',
+                      onSaved: (value) => _durationHours = int.tryParse(value!) ?? 0,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return null;
+                        if (int.tryParse(value) == null) return 'Ungültige Zahl';
+                        return null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: 'Minuten',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                      initialValue: '25',
+                      onSaved: (value) => _durationMinutes = int.tryParse(value!) ?? 25,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return null;
+                        if (int.tryParse(value) == null) return 'Ungültige Zahl';
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Abbrechen'),
+        ),
+        ElevatedButton(
+          onPressed: _submit,
+          child: const Text('Erstellen'),
+        ),
+      ],
     );
   }
 
-  void _choosePrio() async {
-    // Beispiel: Einfache Dialog
-    final newPrio = await showDialog<int>(
+  Future<void> _pickEndDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
       context: context,
-      builder: (ctx) {
-        return SimpleDialog(
-          title: const Text('Priorität'),
-          children: [
-            SimpleDialogOption(
-              child: const Text('Hoch'),
-              onPressed: () => Navigator.pop(ctx, 2),
-            ),
-            SimpleDialogOption(
-              child: const Text('Mittel'),
-              onPressed: () => Navigator.pop(ctx, 1),
-            ),
-            SimpleDialogOption(
-              child: const Text('Niedrig'),
-              onPressed: () => Navigator.pop(ctx, 0),
-            ),
-          ],
-        );
-      },
+      initialDate: _endDate ?? now,
+      firstDate: now,
+      lastDate: DateTime(now.year + 5),
     );
-    if (newPrio != null) {
+
+    if (picked != null) {
       setState(() {
-        priority = newPrio;
+        _endDate = picked;
       });
     }
   }
 
-  // Entfernen der Methoden _chooseTag und _chooseList
+  Future<void> _addNewPriority() async {
+    final TextEditingController _priorityController = TextEditingController();
 
-  void _saveTask() {
-    final newTask = TaskModel(
-      id: DateTime.now().toString(),
-      title: title,
-      description: description,
-      // parse tags from title or special logic
-      // tags: tags, // Entfernt
-      priority: priority,
-      repeatDaily: repeatDaily,
-      // ...
+    final newPriority = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Neue Priorität hinzufügen'),
+        content: TextField(
+          controller: _priorityController,
+          decoration: const InputDecoration(
+            labelText: 'Priorität',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Abbrechen'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final value = _priorityController.text.trim();
+              if (value.isNotEmpty) {
+                Navigator.of(context).pop(value);
+              }
+            },
+            child: const Text('Hinzufügen'),
+          ),
+        ],
+      ),
     );
-    context.read<TasksCubit>().addTask(newTask);
-    Navigator.pop(context);
+
+    if (newPriority != null && newPriority.isNotEmpty) {
+      context.read<SettingsCubit>().addPriority(newPriority);
+      setState(() {
+        _priority = newPriority;
+      });
+    }
+  }
+
+  void _submit() {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+
+      final duration = Duration(
+        hours: _durationHours,
+        minutes: _durationMinutes,
+      );
+
+      final newTask = TaskModel(
+        id: UniqueKey().toString(),
+        title: _title,
+        description: _description,
+        endDate: _endDate,
+        priority: _priority,
+        duration: duration,
+      );
+
+      context.read<TasksCubit>().addTask(newTask);
+      Navigator.of(context).pop();
+    }
   }
 }
+
+
+// lib/widgets/task_list.dart
+
+
+class TaskList extends StatelessWidget {
+  const TaskList({Key? key}) : super(key: key);
+
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    return '${hours}h ${minutes}m';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<TasksCubit, TasksState>(
+      builder: (context, state) {
+        if (state is TasksLoaded) {
+          final tasks = state.tasks;
+          if (tasks.isEmpty) {
+            return const Center(child: Text('Keine Aufgaben vorhanden.'));
+          }
+
+          return ListView.builder(
+            itemCount: tasks.length,
+            itemBuilder: (context, index) {
+              final task = tasks[index];
+              return Card(
+                child: ListTile(
+                  leading: Checkbox(
+                    value: task.isDone,
+                    onChanged: (val) {
+                      // Abgehakt => Cubit: updateTask
+                      final updatedTask = task.copyWith(isDone: val ?? false);
+                      context.read<TasksCubit>().updateTask(updatedTask);
+                    },
+                  ),
+                  title: GestureDetector(
+                    onTap: () => _editTask(context, task),
+                    child: Text(task.title),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(task.description),
+                      if (task.endDate != null)
+                        Text('Enddatum: ${DateFormat.yMd().format(task.endDate!)}'),
+                      Text('Priorität: ${task.priority}'),
+                      Text('Dauer: ${_formatDuration(task.duration)}'),
+                    ],
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () {
+                      context.read<TasksCubit>().removeTask(task.id);
+                    },
+                  ),
+                ),
+              );
+            },
+          );
+        }
+
+        if (state is TasksLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (state is TasksError) {
+          return Center(child: Text(state.message));
+        }
+
+        return const SizedBox.shrink();
+      },
+    );
+  }
+
+  void _editTask(BuildContext context, TaskModel task) {
+    // Implementieren Sie das Bearbeiten einer Aufgabe hier, falls gewünscht
+    // Beispielsweise durch Öffnen eines ähnlichen Dialogs wie AddTaskDialog mit vorgefüllten Werten
+  }
+}
+

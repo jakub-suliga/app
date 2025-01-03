@@ -1,40 +1,16 @@
+// lib/logic/tasks/tasks_cubit.dart
+
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../data/repositories/tasks_repository.dart';
+import 'package:equatable/equatable.dart';
 import '../../data/models/task_model.dart';
 
-class TasksCubit extends Cubit<TasksState> {
-  final TasksRepository tasksRepo;
+// Definieren Sie den State für Tasks
+abstract class TasksState extends Equatable {
+  const TasksState();
 
-  TasksCubit({required this.tasksRepo}) : super(TasksInitial());
-
-  Future<void> loadTasks() async {
-    emit(TasksLoading());
-    try {
-      final tasks = await tasksRepo.getAllTasks();
-      emit(TasksLoaded(tasks));
-    } catch (e) {
-      emit(TasksError('Fehler beim Laden: $e'));
-    }
-  }
-
-  Future<void> addTask(TaskModel task) async {
-    await tasksRepo.addTask(task);
-    await loadTasks();
-  }
-
-  Future<void> deleteTask(TaskModel task) async {
-    await tasksRepo.removeTask(task);
-    await loadTasks();
-  }
-
-  Future<void> updateTask(TaskModel task) async {
-    await tasksRepo.updateTask(task);
-    await loadTasks();
-  }
+  @override
+  List<Object> get props => [];
 }
-
-
-abstract class TasksState {}
 
 class TasksInitial extends TasksState {}
 
@@ -42,10 +18,55 @@ class TasksLoading extends TasksState {}
 
 class TasksLoaded extends TasksState {
   final List<TaskModel> tasks;
-  TasksLoaded(this.tasks);
+
+  const TasksLoaded(this.tasks);
+
+  @override
+  List<Object> get props => [tasks];
 }
 
 class TasksError extends TasksState {
   final String message;
-  TasksError(this.message);
+
+  const TasksError(this.message);
+
+  @override
+  List<Object> get props => [message];
+}
+
+class TasksCubit extends Cubit<TasksState> {
+  TasksCubit() : super(TasksInitial());
+
+  List<TaskModel> _tasks = [];
+
+  void loadTasks() {
+    emit(TasksLoading());
+    try {
+      // Hier können Sie Ihre Daten aus einer Datenbank oder einem Service laden
+      // Für dieses Beispiel verwenden wir eine leere Liste
+      emit(TasksLoaded(List.from(_tasks)));
+    } catch (e) {
+      emit(TasksError('Fehler beim Laden der Aufgaben.'));
+    }
+  }
+
+  void addTask(TaskModel task) {
+    _tasks.add(task);
+    emit(TasksLoaded(List.from(_tasks)));
+  }
+
+  void removeTask(String taskId) {
+    _tasks.removeWhere((task) => task.id == taskId);
+    emit(TasksLoaded(List.from(_tasks)));
+  }
+
+  void updateTask(TaskModel updatedTask) {
+    final index = _tasks.indexWhere((task) => task.id == updatedTask.id);
+    if (index != -1) {
+      _tasks[index] = updatedTask;
+      emit(TasksLoaded(List.from(_tasks)));
+    }
+  }
+
+  // Weitere Methoden nach Bedarf
 }
