@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-part 'theme_state.dart';
 
 class ThemeCubit extends Cubit<ThemeState> {
   static final ThemeData lightTheme = ThemeData.light().copyWith(
@@ -31,4 +30,19 @@ class ThemeCubit extends Cubit<ThemeState> {
     _isDark = isDark;
     emit(_isDark ? ThemeDark() : ThemeLight());
   }
+}
+
+
+abstract class ThemeState {
+  ThemeData get themeData;
+}
+
+class ThemeLight extends ThemeState {
+  @override
+  ThemeData get themeData => ThemeCubit.lightTheme;
+}
+
+class ThemeDark extends ThemeState {
+  @override
+  ThemeData get themeData => ThemeCubit.darkTheme;
 }

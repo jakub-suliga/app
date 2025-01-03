@@ -18,7 +18,7 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
 
   final List<_NavItem> allItems = [
     _NavItem(label: 'Environment', icon: Icons.graphic_eq, widget: const EnvironmentScreen()),
-    _NavItem(label: 'Pomodoro', icon: Icons.timer, widget: const PomodoroScreen()),
+    _NavItem(label: 'Pomodoro', icon: Icons.timer, widget: PomodoroScreen()),
     _NavItem(label: 'Tasks', icon: Icons.check_box_outlined, widget: const TasksScreen()),
     _NavItem(label: 'Settings', icon: Icons.settings, widget: const SettingsScreen()),
   ];

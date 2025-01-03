@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../presentation/screens/bottom_nav_screen.dart';
-import '../../presentation/screens/environment_screen.dart';
-import '../../presentation/screens/pomodoro_screen.dart';
-import '../../presentation/screens/tasks_screen.dart';
-import '../../presentation/screens/settings_screen.dart';
+import '../presentation/screens/bottom_nav_screen.dart';
+import '../presentation/screens/environment_screen.dart';
+import '../presentation/screens/pomodoro_screen.dart';
+import '../presentation/screens/tasks_screen.dart';
+import '../presentation/screens/settings_screen.dart';
 
 class AppRouter {
   static Route onGenerateRoute(RouteSettings settings) {
@@ -28,4 +28,3 @@ class AppRouter {
     }
   }
 }
-

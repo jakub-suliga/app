@@ -4,15 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 // Importiere die Cubits
-import 'core/router/app_router.dart';
+import 'core/app_router.dart';
 import 'logic/settings/settings_cubit.dart';
 import 'logic/tasks/tasks_cubit.dart';
-import 'logic/pomodoro/pomodoro_cubit.dart';
 import 'logic/theme/theme_cubit.dart';
 
 // Importiere die DataProviders und Repositories
 import 'data/data_providers/tasks_data_provider.dart';
 import 'data/repositories/tasks_repository.dart';
+
+// Importiere den navigatorKey
+import 'core/app.dart'; // Importiere den navigatorKey
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,15 +31,12 @@ void main() {
         BlocProvider<TasksCubit>(
           create: (_) => TasksCubit(tasksRepo: tasksRepo)..loadTasks(),
         ),
-        BlocProvider<PomodoroCubit>(
-          create: (_) => PomodoroCubit(),
-        ),
         BlocProvider<ThemeCubit>(
           create: (_) => ThemeCubit(),
         ),
         BlocProvider<SettingsCubit>(
-        create: (_) => SettingsCubit(),
-      ),
+          create: (_) => SettingsCubit(),
+        ),
       ],
       child: const FocusApp(),
     ),
@@ -52,6 +51,7 @@ class FocusApp extends StatelessWidget {
     return BlocBuilder<ThemeCubit, ThemeState>(
       builder: (context, themeState) {
         return MaterialApp(
+          navigatorKey: navigatorKey, // Setze den navigatorKey hier
           title: 'Focus App',
           theme: themeState.themeData,
           onGenerateRoute: AppRouter.onGenerateRoute,

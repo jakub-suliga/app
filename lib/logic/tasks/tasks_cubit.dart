@@ -2,8 +2,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/repositories/tasks_repository.dart';
 import '../../data/models/task_model.dart';
 
-part 'tasks_state.dart';
-
 class TasksCubit extends Cubit<TasksState> {
   final TasksRepository tasksRepo;
 
@@ -33,4 +31,21 @@ class TasksCubit extends Cubit<TasksState> {
     await tasksRepo.updateTask(task);
     await loadTasks();
   }
+}
+
+
+abstract class TasksState {}
+
+class TasksInitial extends TasksState {}
+
+class TasksLoading extends TasksState {}
+
+class TasksLoaded extends TasksState {
+  final List<TaskModel> tasks;
+  TasksLoaded(this.tasks);
+}
+
+class TasksError extends TasksState {
+  final String message;
+  TasksError(this.message);
 }
