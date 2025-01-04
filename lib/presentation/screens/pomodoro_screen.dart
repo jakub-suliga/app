@@ -10,10 +10,9 @@ import '../../logic/tasks/tasks_cubit.dart';
 import '../../data/models/task_model.dart';
 import '../../logic/settings/settings_cubit.dart';
 import '../../service/eSenseService.dart'; // Stellen Sie sicher, dass dieser Pfad korrekt ist
-import '../../core/constants.dart'; // Importieren Sie die festen Prioritäten
 
 class PomodoroScreen extends StatefulWidget {
-  const PomodoroScreen({Key? key}) : super(key: key);
+  const PomodoroScreen({super.key});
 
   @override
   _PomodoroScreenState createState() => _PomodoroScreenState();
@@ -277,50 +276,34 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     }
   }
 
-  /// Methode zur Anzeige der Bewegungsanweisungen
-  Widget _movementInstruction() {
-    if (timer.isRunning && !timer.isBreak) {
-      // Während einer Pomodoro-Einheit
-      if (_movementStatus == 'Bewegung') {
-        return Text(
-          'Bitte fokussieren Sie sich mehr und lenken Sie sich weniger ab.',
-          style: TextStyle(color: Colors.red, fontSize: 16),
-        );
-      } else {
-        return const Text(
-          'Focus Time!',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        );
-      }
-    } else if (timer.isBreak) {
-      // Während einer Pause
-      if (_movementStatus == 'Ruhig') {
-        return Text(
-          'Bitte bewegen Sie sich mehr.',
-          style: TextStyle(color: Colors.red, fontSize: 16),
-        );
-      } else {
-        return const Text(
-          'Aktiviere jetzt den Körper!',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        );
-      }
-    } else {
-      return Container(); // Leeres Container, wenn nichts angezeigt werden soll
-    }
-  }
-
-  /// Methode zur Anzeige der aktuellen Aufgabe
+  /// Methode zur Anzeige der aktuellen Aufgabe oder "Keine bevorstehende Aufgabe"
   Widget _currentTaskDisplay() {
     if (_nextTask == null) {
-      return const Text(
-        'Keine bevorstehende Aufgabe.',
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      return Card(
+        color: Colors.blue.shade50,
+        child: ListTile(
+          leading: const Icon(
+            Icons.assignment,
+            color: Colors.blue,
+          ),
+          title: const Text(
+            'Aktuelle Aufgabe',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          subtitle: const Text(
+            'Keine bevorstehende Aufgabe.',
+            style: TextStyle(fontSize: 16),
+          ),
+        ),
       );
     } else {
       return Card(
         color: Colors.blue.shade50,
         child: ListTile(
+          leading: const Icon(
+            Icons.assignment,
+            color: Colors.blue,
+          ),
           title: Text(
             'Aktuelle Aufgabe: ${_nextTask!.title}',
             style: const TextStyle(fontWeight: FontWeight.bold),
@@ -334,9 +317,107 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
               Text('Verbleibende Dauer: ${_formatDuration(_nextTask!.duration)}'),
             ],
           ),
+          // **Bearbeitungs- und Lösch-Icons entfernt**
+          // Entfernte Zeilen:
+          // trailing: Row(
+          //   mainAxisSize: MainAxisSize.min,
+          //   children: [
+          //     // Bearbeiten-Icon (Stift)
+          //     IconButton(
+          //       icon: const Icon(Icons.edit, color: Colors.blue),
+          //       onPressed: () => _editTask(context, _nextTask!),
+          //       tooltip: 'Aufgabe bearbeiten',
+          //     ),
+          //     // Löschen-Icon (Müll)
+          //     IconButton(
+          //       icon: const Icon(Icons.delete, color: Colors.red),
+          //       onPressed: () {
+          //         // Bestätigungsdialog vor dem Löschen
+          //         _confirmDelete(context, _nextTask!);
+          //       },
+          //       tooltip: 'Aufgabe löschen',
+          //     ),
+          //   ],
+          // ),
         ),
       );
     }
+  }
+
+  /// **Neue Methode zur Anzeige des Fokus-Status**
+  Widget _focusStatusDisplay() {
+    String focusStatus = '';
+
+    if (timer.isRunning && !timer.isBreak) {
+      // Während einer Pomodoro-Session
+      if (_movementStatus == 'Ruhig') {
+        focusStatus = 'Fokussiert';
+      } else if (_movementStatus == 'Bewegung') {
+        focusStatus = 'Abgelenkt'; // Änderung von "Ablenkung" zu "Abgelenkt"
+      }
+    } else if (timer.isBreak) {
+      // Während einer Pause
+      if (_movementStatus == 'Bewegung') {
+        focusStatus = 'Gute Bewegung!'; // Bei Bewegung während Pause
+      } else if (_movementStatus == 'Ruhig') {
+        focusStatus = 'Mehr bewegen!'; // Bei wenig Bewegung während Pause
+      }
+    } else {
+      focusStatus = 'Pomodoro starten.'; // Änderung von "Nicht gestartet" zu "Pomodoro starten."
+    }
+
+    Color statusColor = Colors.blue.shade50; // Gleiche Farbe wie die aktuelle Aufgabenbox
+
+    IconData statusIcon;
+    Color iconColor;
+
+    switch (focusStatus) {
+      case 'Fokussiert':
+        statusIcon = Icons.check_circle;
+        iconColor = Colors.green;
+        break;
+      case 'Abgelenkt':
+        statusIcon = Icons.warning;
+        iconColor = Colors.red;
+        break;
+      case 'Pause':
+        statusIcon = Icons.pause_circle_filled;
+        iconColor = Colors.orange;
+        break;
+      case 'Gute Bewegung!':
+        statusIcon = Icons.directions_walk;
+        iconColor = Colors.green;
+        break;
+      case 'Mehr bewegen!':
+        statusIcon = Icons.directions_run;
+        iconColor = Colors.orange;
+        break;
+      case 'Pomodoro starten.':
+        statusIcon = Icons.play_circle_fill;
+        iconColor = Colors.blue;
+        break;
+      default:
+        statusIcon = Icons.info;
+        iconColor = Colors.blue;
+    }
+
+    return Card(
+      color: statusColor,
+      child: ListTile(
+        leading: Icon(
+          statusIcon,
+          color: iconColor,
+        ),
+        title: const Text(
+          'Fokus Status',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          focusStatus,
+          style: const TextStyle(fontSize: 16),
+        ),
+      ),
+    );
   }
 
   String _formatDuration(Duration duration) {
@@ -346,34 +427,39 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: const Text('Pomodoro Timer'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.list),
-              onPressed: () {
-                Navigator.pushNamed(context, '/tasks');
-              },
-              tooltip: 'Aufgabenliste',
-            ),
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Pomodoro Timer'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.list),
+            onPressed: () {
+              Navigator.pushNamed(context, '/tasks');
+            },
+            tooltip: 'Aufgabenliste',
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(5.0, 30.0, 5.0, 15.0),
+        child: Column(
+          children: <Widget>[
+            // **Entfernt: _movementInstruction(), Bewegungsanweisungen anzeigen**
+            // Dieser Aufruf wurde entfernt, um die über der Fokus-Status-Box angezeigten Texte zu entfernen.
+            // const SizedBox(height: 10),
+            _focusStatusDisplay(), // Fokus-Status anzeigen
+            const SizedBox(height: 10),
+            _currentTaskDisplay(), // Anzeige der aktuellen Aufgabe oder "Keine bevorstehende Aufgabe"
+            const SizedBox(height: 20),
+            _timerWidget(),
+            const SizedBox(height: 20),
+            _control(),
           ],
         ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(5.0, 30.0, 5.0, 15.0),
-          child: Column(
-            children: <Widget>[
-              _movementInstruction(), // Bewegungsanweisungen anzeigen
-              const SizedBox(height: 10),
-              _currentTaskDisplay(), // Anzeige der aktuellen Aufgabe
-              const SizedBox(height: 20),
-              _timerWidget(),
-              const SizedBox(height: 20),
-              _control(),
-            ],
-          ),
-        ),
-      );
+      ),
+    );
+  }
 
   Widget _timerWidget() => Center(
         child: SizedBox(
@@ -513,14 +599,14 @@ class RadialProgressBar extends StatelessWidget {
   final Widget? child; // Macht das Kind optional
 
   const RadialProgressBar({
-    Key? key,
+    super.key,
     required this.progressPercent,
     required this.progressColor,
     required this.trackColor,
     this.trackWidth = 10.0,
     this.progressWidth = 10.0,
     this.child, // Entferne 'required'
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

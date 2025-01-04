@@ -7,7 +7,7 @@ import '../../logic/settings/settings_cubit.dart'; // Stelle sicher, dass Settin
 import 'dart:async';
 
 class EnvironmentScreen extends StatefulWidget {
-  const EnvironmentScreen({Key? key}) : super(key: key);
+  const EnvironmentScreen({super.key});
 
   @override
   State<EnvironmentScreen> createState() => _EnvironmentScreenState();

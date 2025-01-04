@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../logic/tasks/tasks_cubit.dart';
 import '../../../data/models/task_model.dart';
 import 'package:intl/intl.dart';
-import '../../logic/settings/settings_cubit.dart';
 import '../../core/constants.dart'; // Importieren Sie die festen Prioritäten
 
 class TasksScreen extends StatefulWidget {
@@ -141,20 +140,11 @@ class _TasksScreenState extends State<TasksScreen> {
       }
     });
   }
-
   void _createTask() {
     // Öffnen Sie den TaskDialog ohne eine bestehende Aufgabe
     showDialog(
       context: context,
       builder: (context) => const TaskDialog(),
-    );
-  }
-
-  void _editTask(BuildContext context, TaskModel task) {
-    // Öffnen Sie den TaskDialog mit der bestehenden Aufgabe
-    showDialog(
-      context: context,
-      builder: (context) => TaskDialog(task: task),
     );
   }
 }

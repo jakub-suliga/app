@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../logic/settings/settings_cubit.dart';
-import '../../core/constants.dart'; // Importieren Sie die festen Prioritäten
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -264,7 +263,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '$label: ${value.toInt()} ${unit}',
+          '$label: ${value.toInt()} $unit',
           style: const TextStyle(fontSize: 16),
         ),
         Slider(

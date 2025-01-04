@@ -3,14 +3,13 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../data/models/task_model.dart';
-import '../../core/constants.dart'; // Importieren Sie die festen Prioritäten
 
 part 'tasks_state.dart';
 
 class TasksCubit extends Cubit<TasksState> {
   TasksCubit() : super(TasksInitial());
 
-  List<TaskModel> _tasks = [];
+  final List<TaskModel> _tasks = [];
 
   /// Lädt die Aufgabenliste
   void loadTasks() {
