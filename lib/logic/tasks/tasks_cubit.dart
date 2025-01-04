@@ -3,41 +3,16 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../data/models/task_model.dart';
+import '../../core/constants.dart'; // Importieren Sie die festen Prioritäten
 
-abstract class TasksState extends Equatable {
-  const TasksState();
-
-  @override
-  List<Object> get props => [];
-}
-
-class TasksInitial extends TasksState {}
-
-class TasksLoading extends TasksState {}
-
-class TasksLoaded extends TasksState {
-  final List<TaskModel> tasks;
-
-  const TasksLoaded(this.tasks);
-
-  @override
-  List<Object> get props => [tasks];
-}
-
-class TasksError extends TasksState {
-  final String message;
-
-  const TasksError(this.message);
-
-  @override
-  List<Object> get props => [message];
-}
+part 'tasks_state.dart';
 
 class TasksCubit extends Cubit<TasksState> {
   TasksCubit() : super(TasksInitial());
 
   List<TaskModel> _tasks = [];
 
+  /// Lädt die Aufgabenliste
   void loadTasks() {
     emit(TasksLoading());
     try {
@@ -49,16 +24,19 @@ class TasksCubit extends Cubit<TasksState> {
     }
   }
 
+  /// Fügt eine neue Aufgabe hinzu
   void addTask(TaskModel task) {
     _tasks.add(task);
     emit(TasksLoaded(List.from(_tasks)));
   }
 
+  /// Entfernt eine Aufgabe basierend auf ihrer ID
   void removeTask(String taskId) {
     _tasks.removeWhere((task) => task.id == taskId);
     emit(TasksLoaded(List.from(_tasks)));
   }
 
+  /// Aktualisiert eine bestehende Aufgabe
   void updateTask(TaskModel updatedTask) {
     final index = _tasks.indexWhere((task) => task.id == updatedTask.id);
     if (index != -1) {
@@ -67,11 +45,10 @@ class TasksCubit extends Cubit<TasksState> {
     }
   }
 
-  /// Methode zur Bestimmung der nächsten Aufgabe
+  /// Bestimmt die nächste Aufgabe basierend auf Enddatum, Priorität und Dauer
   TaskModel? getNextTask() {
     final now = DateTime.now();
     final pendingTasks = _tasks.where((task) =>
-      !task.isDone &&
       (task.endDate == null || task.endDate!.isAfter(now))
     ).toList();
 
@@ -84,7 +61,7 @@ class TasksCubit extends Cubit<TasksState> {
       int dateComparison = aDate.compareTo(bDate);
       if (dateComparison != 0) return dateComparison;
 
-      // 2. Sortiere nach Priorität (Hoch > Normal > Niedrig)
+      // 2. Sortiere nach Priorität (Hoch > Mittel > Niedrig)
       int priorityA = _priorityValue(a.priority);
       int priorityB = _priorityValue(b.priority);
       if (priorityA != priorityB) return priorityB.compareTo(priorityA); // Höhere Priorität zuerst
@@ -101,7 +78,7 @@ class TasksCubit extends Cubit<TasksState> {
     switch (priority.toLowerCase()) {
       case 'hoch':
         return 3;
-      case 'normal':
+      case 'mittel':
         return 2;
       case 'niedrig':
         return 1;

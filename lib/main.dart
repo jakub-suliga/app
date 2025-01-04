@@ -16,6 +16,9 @@ import 'data/repositories/tasks_repository.dart';
 // Importiere den navigatorKey
 import 'core/app.dart'; // Importiere den navigatorKey
 
+// Importiere IntroScreen
+import 'presentation/screens/intro_screen.dart';
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -54,8 +57,9 @@ class FocusApp extends StatelessWidget {
           navigatorKey: navigatorKey, // Setze den navigatorKey hier
           title: 'Focus App',
           theme: themeState.themeData,
+          home: const IntroScreen(), // Setze IntroScreen als Start-Widget
           onGenerateRoute: AppRouter.onGenerateRoute,
-          initialRoute: '/',
+          // initialRoute: '/', // Entferne initialRoute, wenn Sie home verwenden
         );
       },
     );

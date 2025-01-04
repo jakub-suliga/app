@@ -1,110 +1,35 @@
 // lib/logic/settings/settings_cubit.dart
 
-import 'package:bloc/bloc.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import '../../../core/constants.dart'; // Importieren Sie die Konstante
 
-class SettingsState extends Equatable {
-  final String eSenseDeviceName;
-  final bool showCompletedTasks;
-  final List<String> priorities;
-
-  // Neue Pomodoro-Einstellungen
-  final Duration pomodoroDuration;
-  final Duration shortBreakDuration;
-  final Duration longBreakDuration;
-  final int sessionsBeforeLongBreak;
-  final bool autoStartNextPomodoro;
-
-  const SettingsState({
-    required this.eSenseDeviceName,
-    required this.showCompletedTasks,
-    required this.priorities,
-    this.pomodoroDuration = const Duration(minutes: 25),
-    this.shortBreakDuration = const Duration(minutes: 5),
-    this.longBreakDuration = const Duration(minutes: 15),
-    this.sessionsBeforeLongBreak = 4,
-    this.autoStartNextPomodoro = false,
-  });
-
-  SettingsState copyWith({
-    String? eSenseDeviceName,
-    bool? showCompletedTasks,
-    List<String>? priorities,
-    Duration? pomodoroDuration,
-    Duration? shortBreakDuration,
-    Duration? longBreakDuration,
-    int? sessionsBeforeLongBreak,
-    bool? autoStartNextPomodoro,
-  }) {
-    return SettingsState(
-      eSenseDeviceName: eSenseDeviceName ?? this.eSenseDeviceName,
-      showCompletedTasks: showCompletedTasks ?? this.showCompletedTasks,
-      priorities: priorities ?? this.priorities,
-      pomodoroDuration: pomodoroDuration ?? this.pomodoroDuration,
-      shortBreakDuration: shortBreakDuration ?? this.shortBreakDuration,
-      longBreakDuration: longBreakDuration ?? this.longBreakDuration,
-      sessionsBeforeLongBreak: sessionsBeforeLongBreak ?? this.sessionsBeforeLongBreak,
-      autoStartNextPomodoro: autoStartNextPomodoro ?? this.autoStartNextPomodoro,
-    );
-  }
-
-  @override
-  List<Object> get props => [
-        eSenseDeviceName,
-        showCompletedTasks,
-        priorities,
-        pomodoroDuration,
-        shortBreakDuration,
-        longBreakDuration,
-        sessionsBeforeLongBreak,
-        autoStartNextPomodoro,
-      ];
-}
+part 'settings_state.dart';
 
 class SettingsCubit extends Cubit<SettingsState> {
   SettingsCubit()
-      : super(const SettingsState(
-          eSenseDeviceName: 'DefaultDeviceName',
-          showCompletedTasks: true,
-          priorities: ['Hoch', 'Normal', 'Niedrig'], // Standardprioritäten
+      : super(SettingsState(
+          eSenseDeviceName: '',
+          priorities: AppConstants.fixedPriorities,
+          pomodoroDuration: Duration(minutes: 25),
+          shortBreakDuration: Duration(minutes: 5),
+          longBreakDuration: Duration(minutes: 15),
+          sessionsBeforeLongBreak: 4,
+          autoStartNextPomodoro: false,
         ));
 
-  void setESenseDeviceName(String newName) {
-    emit(state.copyWith(eSenseDeviceName: newName));
+  void setESenseDeviceName(String name) {
+    emit(state.copyWith(eSenseDeviceName: name));
   }
 
-  void toggleShowCompletedTasks(bool value) {
-    emit(state.copyWith(showCompletedTasks: value));
-  }
+  // Entfernen der Methode zur Anzeige erledigter Aufgaben
+  // void toggleShowCompletedTasks(bool value) {
+  //   emit(state.copyWith(showCompletedTasks: value));
+  // }
 
-  void addPriority(String priority) {
-    if (!state.priorities.contains(priority)) {
-      final updatedPriorities = List<String>.from(state.priorities)..add(priority);
-      emit(state.copyWith(priorities: updatedPriorities));
-    }
-  }
+  // Entfernen Sie alle Methoden zum Hinzufügen, Bearbeiten und Löschen von Prioritäten
 
-  void removePriority(String priority) {
-    if (state.priorities.contains(priority)) {
-      final updatedPriorities = List<String>.from(state.priorities)..remove(priority);
-      emit(state.copyWith(priorities: updatedPriorities));
-    }
-  }
-
-  void editPriority(String oldPriority, String newPriority) {
-    final updatedPriorities = state.priorities.map((prio) => prio == oldPriority ? newPriority : prio).toList();
-    emit(state.copyWith(priorities: updatedPriorities));
-  }
-
-  void reorderPriorities(int oldIndex, int newIndex) {
-    final updatedPriorities = List<String>.from(state.priorities);
-    final item = updatedPriorities.removeAt(oldIndex);
-    updatedPriorities.insert(newIndex, item);
-    emit(state.copyWith(priorities: updatedPriorities));
-  }
-
-  // Neue Methoden zur Verwaltung der Pomodoro-Einstellungen
-
+  // Methoden zum Aktualisieren der Pomodoro-Einstellungen bleiben erhalten
   void setPomodoroDuration(Duration duration) {
     emit(state.copyWith(pomodoroDuration: duration));
   }
@@ -117,11 +42,13 @@ class SettingsCubit extends Cubit<SettingsState> {
     emit(state.copyWith(longBreakDuration: duration));
   }
 
-  void setSessionsBeforeLongBreak(int sessions) {
-    emit(state.copyWith(sessionsBeforeLongBreak: sessions));
+  void setSessionsBeforeLongBreak(int count) {
+    emit(state.copyWith(sessionsBeforeLongBreak: count));
   }
 
   void toggleAutoStartNextPomodoro(bool value) {
     emit(state.copyWith(autoStartNextPomodoro: value));
   }
+
+  // Keine Methoden mehr zum Bearbeiten von Prioritäten
 }

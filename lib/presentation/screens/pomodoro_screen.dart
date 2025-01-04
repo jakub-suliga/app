@@ -9,6 +9,7 @@ import '../../logic/tasks/tasks_cubit.dart';
 import '../../data/models/task_model.dart';
 import '../../logic/settings/settings_cubit.dart';
 import '../../service/eSenseService.dart'; // Stellen Sie sicher, dass dieser Pfad korrekt ist
+import '../../core/constants.dart'; // Importieren Sie die festen Prioritäten
 
 class PomodoroScreen extends StatefulWidget {
   const PomodoroScreen({Key? key}) : super(key: key);
@@ -21,7 +22,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   late PomoTimer timer;
   double _currentSessionProgress = 0.0;
   Color accent = const Color(0xFFF09E8C);
-  String _selectedTaskId = '';
 
   // eSense-Variablen
   final ESenseService _eSenseService = ESenseService();
@@ -65,7 +65,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
       if (state is TasksLoaded) {
         setState(() {
           _nextTask = context.read<TasksCubit>().getNextTask();
-          _selectedTaskId = _nextTask?.id ?? '';
         });
       }
     });
@@ -73,7 +72,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     // Initiale Bestimmung der nächsten Aufgabe
     if (context.read<TasksCubit>().state is TasksLoaded) {
       _nextTask = context.read<TasksCubit>().getNextTask();
-      _selectedTaskId = _nextTask?.id ?? '';
     }
   }
 
@@ -117,7 +115,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     }
   }
 
-  // Neue Methode zur Behandlung des Abschlusses einer Session oder Pause
+  // **Modifizierte Methode zur Behandlung des Abschlusses einer Session oder Pause**
   void _handleSessionComplete(bool isSession) {
     if (isSession) {
       // Eine Pomodoro-Session ist beendet
@@ -127,6 +125,37 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
       } else {
         timer.startBreak(isLong: false);
       }
+
+      // **Neue Logik zur Aktualisierung der Aufgabenzeit**
+      if (_nextTask != null) {
+        final tasksCubit = context.read<TasksCubit>();
+        final selectedTask = _nextTask!;
+
+        // Holen Sie sich die Pomodoro-Dauer aus den Einstellungen
+        final pomodoroDuration = context.read<SettingsCubit>().state.pomodoroDuration;
+
+        // Berechnen Sie die neue verbleibende Dauer
+        final newDuration = selectedTask.duration - pomodoroDuration;
+
+        if (newDuration <= Duration.zero) {
+          // Aufgabe ist abgeschlossen und wird entfernt
+          tasksCubit.removeTask(selectedTask.id);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Aufgabe "${selectedTask.title}" abgeschlossen und entfernt!')),
+          );
+        } else {
+          // Aktualisieren Sie die verbleibende Dauer
+          final updatedTask = selectedTask.copyWith(
+            duration: newDuration,
+          );
+          tasksCubit.updateTask(updatedTask);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Aufgabe "${updatedTask.title}" aktualisiert: ${_formatDuration(newDuration)} verbleibend.')),
+          );
+        }
+      }
+      // **Ende der neuen Logik**
+
     } else {
       // Eine Pause ist beendet
       if (timer.autoStartNextPomodoro) {
@@ -137,14 +166,13 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     // Aktualisiere die nächste Aufgabe nach dem Abschluss
     setState(() {
       _nextTask = context.read<TasksCubit>().getNextTask();
-      _selectedTaskId = _nextTask?.id ?? '';
     });
   }
 
   void _startTimer() {
-    if (_selectedTaskId.isEmpty) {
+    if (_nextTask == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Keine bevorstehende Aufgabe ausgewählt.')),
+        const SnackBar(content: Text('Keine bevorstehende Aufgabe verfügbar.')),
       );
       return;
     }
@@ -238,8 +266,8 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     }
   }
 
-  /// Methode zur Anzeige der nächsten Aufgabe
-  Widget _nextTaskDisplay() {
+  /// Methode zur Anzeige der aktuellen Aufgabe
+  Widget _currentTaskDisplay() {
     if (_nextTask == null) {
       return const Text(
         'Keine bevorstehende Aufgabe.',
@@ -250,7 +278,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
         color: Colors.blue.shade50,
         child: ListTile(
           title: Text(
-            'Nächste Aufgabe: ${_nextTask!.title}',
+            'Aktuelle Aufgabe: ${_nextTask!.title}',
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           subtitle: Column(
@@ -259,7 +287,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
               if (_nextTask!.endDate != null)
                 Text('Fällig bis: ${DateFormat.yMd().format(_nextTask!.endDate!)}'),
               Text('Priorität: ${_nextTask!.priority}'),
-              Text('Dauer: ${_formatDuration(_nextTask!.duration)}'),
+              Text('Verbleibende Dauer: ${_formatDuration(_nextTask!.duration)}'),
             ],
           ),
         ),
@@ -293,11 +321,9 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
             children: <Widget>[
               _movementInstruction(), // Bewegungsanweisungen anzeigen
               const SizedBox(height: 10),
-              _nextTaskDisplay(), // Anzeige der nächsten Aufgabe
+              _currentTaskDisplay(), // Anzeige der aktuellen Aufgabe
               const SizedBox(height: 20),
               _timerWidget(),
-              const SizedBox(height: 20),
-              _taskDropdown(),
               const SizedBox(height: 20),
               _control(),
             ],
@@ -401,40 +427,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
           ),
         ),
       );
-
-  Widget _taskDropdown() => BlocBuilder<TasksCubit, TasksState>(
-        builder: (context, state) {
-          List<TaskModel> tasks = [];
-          if (state is TasksLoaded) {
-            tasks = state.tasks;
-          }
-
-          if (tasks.isEmpty) {
-            return const Text('Keine Aufgaben verfügbar.');
-          }
-
-          return DropdownButtonFormField<String>(
-            decoration: const InputDecoration(
-              labelText: 'Wähle eine Aufgabe',
-              border: OutlineInputBorder(),
-            ),
-            value: _selectedTaskId.isEmpty ? null : _selectedTaskId,
-            items: tasks.map((TaskModel task) {
-              return DropdownMenuItem<String>(
-                value: task.id,
-                child: Text(task.title),
-              );
-            }).toList(),
-            onChanged: (String? newValue) {
-              setState(() {
-                _selectedTaskId = newValue ?? '';
-              });
-            },
-            validator: (value) =>
-                value == null || value.isEmpty ? 'Bitte wähle eine Aufgabe aus.' : null,
-          );
-        },
-      );
 }
 
 /// Benutzerdefinierte RadialProgressBar ohne externe Pakete
@@ -527,7 +519,7 @@ class RadialPainter extends CustomPainter {
   }
 }
 
-/// Aktualisierte PomoTimer-Klasse mit dynamischen Einstellungen
+/// **Aktualisierte PomoTimer-Klasse mit dynamischen Einstellungen**
 class PomoTimer {
   final Function onTimerUpdate;
   final Function(bool isSession) onSessionComplete;
@@ -562,7 +554,7 @@ class PomoTimer {
   Duration get currentTime => _currentTime;
 
   String get formattedCurrentTime {
-    final minutes = _currentTime.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final minutes = _currentTime.inMinutes.toString().padLeft(2, '0');
     final seconds = _currentTime.inSeconds.remainder(60).toString().padLeft(2, '0');
     return '$minutes:$seconds';
   }
@@ -656,6 +648,13 @@ class PomoTimer {
     // Falls der Timer gerade läuft, aktualisiere die Startzeit entsprechend
     if (isRunning) {
       startTime = _currentTime;
+    } else {
+      // **Neue Änderung: Aktualisiere _currentTime und startTime, wenn der Timer nicht läuft**
+      _currentTime = pomodoroDuration ?? _currentTime;
+      startTime = _currentTime;
     }
+
+    // Benachrichtige die UI über die Aktualisierung
+    onTimerUpdate();
   }
 }

@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../logic/settings/settings_cubit.dart';
+import '../../core/constants.dart'; // Importieren Sie die festen Prioritäten
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -13,7 +14,6 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _deviceNameController;
-  String _tempName = ''; // Puffer für das Textfeld
 
   // Controller für Pomodoro-Einstellungen
   final TextEditingController _pomodoroController = TextEditingController();
@@ -28,7 +28,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     // Starte mit dem aktuellen Gerätenamen aus dem State
     final currentName = context.read<SettingsCubit>().state.eSenseDeviceName;
-    _tempName = currentName;
     _deviceNameController = TextEditingController(text: currentName);
 
     // Initialisiere die Pomodoro-Controller mit den aktuellen Einstellungen
@@ -53,20 +52,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.dispose();
   }
 
-  // Methode zum Anzeigen des Dialogs zum Bearbeiten der Prioritäten
-  void _showEditPrioritiesDialog(
-      BuildContext context, List<String> priorities) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) {
-        return Padding(
-          padding: MediaQuery.of(ctx).viewInsets,
-          child: EditPrioritiesSection(priorities: priorities),
-        );
-      },
-    );
-  }
+  // Methode zum Anzeigen des Dialogs zum Bearbeiten der Prioritäten entfernen
 
   // Methode zum Anzeigen des Dialogs zum Bearbeiten der Pomodoro-Einstellungen
   void _showEditPomodoroSettingsDialog(BuildContext context) {
@@ -125,8 +111,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 // Automatisches Starten der nächsten Pomodoro-Einheit
                 SwitchListTile(
-                  title:
-                      const Text('Automatisch nächste Pomodoro-Einheit starten'),
+                  title: const Text('Automatisch nächste Pomodoro-Einheit starten'),
                   value: _autoStartNextPomodoro,
                   onChanged: (val) {
                     setState(() {
@@ -149,7 +134,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     int.tryParse(_pomodoroController.text);
                 final shortBreakMinutes =
                     int.tryParse(_shortBreakController.text);
-                final longBreakMinutes = int.tryParse(_longBreakController.text);
+                final longBreakMinutes =
+                    int.tryParse(_longBreakController.text);
                 final sessionsBeforeLongBreak =
                     int.tryParse(_sessionsBeforeLongBreakController.text);
 
@@ -178,12 +164,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Duration(minutes: longBreakMinutes));
                 settingsCubit.setSessionsBeforeLongBreak(
                     sessionsBeforeLongBreak);
-                settingsCubit
-                    .toggleAutoStartNextPomodoro(_autoStartNextPomodoro);
+                settingsCubit.toggleAutoStartNextPomodoro(
+                    _autoStartNextPomodoro);
 
                 // Zeige Bestätigung
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Pomodoro-Einstellungen gespeichert.')),
+                  const SnackBar(
+                      content: Text('Pomodoro-Einstellungen gespeichert.')),
                 );
 
                 Navigator.pop(ctx);
@@ -228,7 +215,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   controller: _deviceNameController,
                   onChanged: (val) {
-                    _tempName = val; // nur lokal speichern
+                    // Keine Veränderung hier, da Prioritäten fix sind
                   },
                 ),
                 const SizedBox(height: 8),
@@ -236,12 +223,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // Speichern-Button => erst DANN wird der Name ins State übernommen
                 ElevatedButton(
                   onPressed: () {
-                    settingsCubit.setESenseDeviceName(_tempName.trim());
+                    settingsCubit.setESenseDeviceName(_deviceNameController.text.trim());
                     // Option: Zeige SnackBar oder so
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          'eSense-Gerätename gespeichert: "${_tempName.trim()}"',
+                          'eSense-Gerätename gespeichert: "${_deviceNameController.text.trim()}"',
                         ),
                       ),
                     );
@@ -250,33 +237,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                const Divider(),
-                // -------------------------------------------
-                // Aufgabenliste-Einstellungen
-                // -------------------------------------------
-                const Text(
-                  'Aufgabenliste',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                SwitchListTile(
-                  title: const Text('Erledigte Aufgaben anzeigen'),
-                  value: state.showCompletedTasks,
-                  onChanged: (val) {
-                    settingsCubit.toggleShowCompletedTasks(val);
-                  },
-                ),
-                const SizedBox(height: 8),
-
-                // Prioritäten
-                ListTile(
-                  title: const Text('Prioritäten bearbeiten'),
-                  trailing: const Icon(Icons.edit),
-                  onTap: () {
-                    _showEditPrioritiesDialog(context, state.priorities);
-                  },
-                ),
-
-                const SizedBox(height: 16),
                 const Divider(),
                 // -------------------------------------------
                 // Pomodoro-Einstellungen
@@ -399,153 +359,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           },
         ),
       ),
-    );
-  }
-}
-
-/// Benutzerdefinierte Klasse zum Bearbeiten der Prioritäten
-class EditPrioritiesSection extends StatefulWidget {
-  final List<String> priorities;
-
-  const EditPrioritiesSection({required this.priorities, Key? key})
-      : super(key: key);
-
-  @override
-  State<EditPrioritiesSection> createState() => _EditPrioritiesSectionState();
-}
-
-class _EditPrioritiesSectionState extends State<EditPrioritiesSection> {
-  late List<String> priorities;
-  final TextEditingController _controller = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    priorities = List<String>.from(widget.priorities);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final settingsCubit = context.read<SettingsCubit>();
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text(
-            'Prioritäten bearbeiten',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-        ),
-        ReorderableListView(
-          shrinkWrap: true,
-          onReorder: (oldIndex, newIndex) {
-            setState(() {
-              if (newIndex > oldIndex) newIndex--;
-              final item = priorities.removeAt(oldIndex);
-              priorities.insert(newIndex, item);
-            });
-            // Wichtig: Reihenfolge in SettingsCubit speichern
-            settingsCubit.reorderPriorities(oldIndex, newIndex);
-          },
-          children: [
-            for (int index = 0; index < priorities.length; index++)
-              ListTile(
-                key: ValueKey(priorities[index]),
-                title: Text(priorities[index]),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit),
-                      onPressed: () =>
-                          _showEditPriorityDialog(context, priorities[index]),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () {
-                        settingsCubit.removePriority(priorities[index]);
-                        setState(() {
-                          priorities.removeAt(index);
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: TextField(
-            controller: _controller,
-            decoration: const InputDecoration(
-              labelText: 'Neue Priorität',
-              border: OutlineInputBorder(),
-            ),
-            onSubmitted: (_) => _addPriority(settingsCubit),
-          ),
-        ),
-        ElevatedButton(
-          onPressed: () => _addPriority(settingsCubit),
-          child: const Text('Priorität hinzufügen'),
-        ),
-        const SizedBox(height: 16),
-      ],
-    );
-  }
-
-  void _addPriority(SettingsCubit cubit) {
-    final newPriority = _controller.text.trim();
-    if (newPriority.isNotEmpty && !cubit.state.priorities.contains(newPriority)) {
-      cubit.addPriority(newPriority);
-      setState(() {
-        priorities.add(newPriority);
-      });
-      _controller.clear();
-    }
-  }
-
-  void _showEditPriorityDialog(BuildContext context, String oldPriority) {
-    final TextEditingController controller =
-        TextEditingController(text: oldPriority);
-    final settingsCubit = context.read<SettingsCubit>();
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Priorität bearbeiten'),
-          content: TextField(
-            controller: controller,
-            decoration:
-                const InputDecoration(hintText: 'Neuer Priorität-Name'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Abbrechen'),
-            ),
-            TextButton(
-              onPressed: () {
-                final newPriority = controller.text.trim();
-                if (newPriority.isNotEmpty && newPriority != oldPriority) {
-                  settingsCubit.editPriority(oldPriority, newPriority);
-                  Navigator.pop(ctx);
-                  setState(() {
-                    final index = priorities.indexOf(oldPriority);
-                    if (index != -1) {
-                      priorities[index] = newPriority;
-                    }
-                  });
-                }
-              },
-              child: const Text('Speichern'),
-            ),
-          ],
-        );
-      },
     );
   }
 }
