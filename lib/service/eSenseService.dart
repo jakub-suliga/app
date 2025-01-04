@@ -48,7 +48,7 @@ class ESenseService {
   Future<void> initialize(String deviceName) async {
     _eSenseManager = ESenseManager(deviceName);
     await _askForPermissions();
-    _listenToESense();
+    await _listenToESense();
   }
 
   Future<void> _askForPermissions() async {
@@ -261,6 +261,7 @@ class ESenseService {
     rawImuDataString = 'No data';
     _deviceStatusController.add('Sensor-Events abbestellt');
     _movementStatusController.add(movementStatus);
+    _buttonStatusController.add(button);
     ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
       const SnackBar(content: Text('Sensor-Events abbestellt.')),
     );
@@ -309,7 +310,7 @@ class ESenseService {
   }
 }
 
-// Hilfsklasse zum Speichern der Magnitude und des Zeitstempels
+/// Hilfsklasse zum Speichern der Magnitude und des Zeitstempels
 class _AccelSample {
   final double magnitude;
   final DateTime time;

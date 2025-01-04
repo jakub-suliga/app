@@ -1,4 +1,4 @@
-// lib/screens/settings_screen.dart
+// lib/presentation/screens/settings_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -15,12 +15,11 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _deviceNameController;
 
-  // Controller für Pomodoro-Einstellungen
-  final TextEditingController _pomodoroController = TextEditingController();
-  final TextEditingController _shortBreakController = TextEditingController();
-  final TextEditingController _longBreakController = TextEditingController();
-  final TextEditingController _sessionsBeforeLongBreakController =
-      TextEditingController();
+  // State-Variablen für Pomodoro-Einstellungen
+  double _pomodoroMinutes = 25.0; // Standardwert
+  double _shortBreakMinutes = 5.0; // Standardwert
+  double _longBreakMinutes = 15.0; // Standardwert
+  double _sessionsBeforeLongBreak = 4.0; // Standardwert
   bool _autoStartNextPomodoro = false;
 
   @override
@@ -30,157 +29,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final currentName = context.read<SettingsCubit>().state.eSenseDeviceName;
     _deviceNameController = TextEditingController(text: currentName);
 
-    // Initialisiere die Pomodoro-Controller mit den aktuellen Einstellungen
+    // Initialisiere die Pomodoro-Settings mit den aktuellen Einstellungen
     final settings = context.read<SettingsCubit>().state;
-    _pomodoroController.text = settings.pomodoroDuration.inMinutes.toString();
-    _shortBreakController.text =
-        settings.shortBreakDuration.inMinutes.toString();
-    _longBreakController.text =
-        settings.longBreakDuration.inMinutes.toString();
-    _sessionsBeforeLongBreakController.text =
-        settings.sessionsBeforeLongBreak.toString();
+    _pomodoroMinutes = settings.pomodoroDuration.inMinutes.toDouble();
+    _shortBreakMinutes = settings.shortBreakDuration.inMinutes.toDouble();
+    _longBreakMinutes = settings.longBreakDuration.inMinutes.toDouble();
+    _sessionsBeforeLongBreak = settings.sessionsBeforeLongBreak.toDouble();
     _autoStartNextPomodoro = settings.autoStartNextPomodoro;
   }
 
   @override
   void dispose() {
     _deviceNameController.dispose();
-    _pomodoroController.dispose();
-    _shortBreakController.dispose();
-    _longBreakController.dispose();
-    _sessionsBeforeLongBreakController.dispose();
     super.dispose();
-  }
-
-  // Methode zum Anzeigen des Dialogs zum Bearbeiten der Prioritäten entfernen
-
-  // Methode zum Anzeigen des Dialogs zum Bearbeiten der Pomodoro-Einstellungen
-  void _showEditPomodoroSettingsDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Pomodoro-Einstellungen bearbeiten'),
-          content: SingleChildScrollView(
-            child: Column(
-              children: [
-                // Pomodoro-Dauer
-                TextField(
-                  controller: _pomodoroController,
-                  decoration: const InputDecoration(
-                    labelText: 'Dauer einer Pomodoro-Einheit (Minuten)',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 8),
-
-                // Kurze Pause
-                TextField(
-                  controller: _shortBreakController,
-                  decoration: const InputDecoration(
-                    labelText: 'Dauer einer kurzen Pause (Minuten)',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 8),
-
-                // Lange Pause
-                TextField(
-                  controller: _longBreakController,
-                  decoration: const InputDecoration(
-                    labelText: 'Dauer einer langen Pause (Minuten)',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 8),
-
-                // Anzahl der Sitzungen vor langer Pause
-                TextField(
-                  controller: _sessionsBeforeLongBreakController,
-                  decoration: const InputDecoration(
-                    labelText:
-                        'Anzahl der Pomodoro-Einheiten vor einer langen Pause',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 8),
-
-                // Automatisches Starten der nächsten Pomodoro-Einheit
-                SwitchListTile(
-                  title: const Text('Automatisch nächste Pomodoro-Einheit starten'),
-                  value: _autoStartNextPomodoro,
-                  onChanged: (val) {
-                    setState(() {
-                      _autoStartNextPomodoro = val;
-                    });
-                  },
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Abbrechen'),
-            ),
-            TextButton(
-              onPressed: () {
-                // Validierung der Eingaben
-                final pomodoroMinutes =
-                    int.tryParse(_pomodoroController.text);
-                final shortBreakMinutes =
-                    int.tryParse(_shortBreakController.text);
-                final longBreakMinutes =
-                    int.tryParse(_longBreakController.text);
-                final sessionsBeforeLongBreak =
-                    int.tryParse(_sessionsBeforeLongBreakController.text);
-
-                if (pomodoroMinutes == null ||
-                    shortBreakMinutes == null ||
-                    longBreakMinutes == null ||
-                    sessionsBeforeLongBreak == null ||
-                    pomodoroMinutes <= 0 ||
-                    shortBreakMinutes <= 0 ||
-                    longBreakMinutes <= 0 ||
-                    sessionsBeforeLongBreak <= 0) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Bitte geben Sie gültige Werte ein.')),
-                  );
-                  return;
-                }
-
-                // Aktualisiere die Einstellungen im Cubit
-                final settingsCubit = context.read<SettingsCubit>();
-                settingsCubit.setPomodoroDuration(
-                    Duration(minutes: pomodoroMinutes));
-                settingsCubit.setShortBreakDuration(
-                    Duration(minutes: shortBreakMinutes));
-                settingsCubit.setLongBreakDuration(
-                    Duration(minutes: longBreakMinutes));
-                settingsCubit.setSessionsBeforeLongBreak(
-                    sessionsBeforeLongBreak);
-                settingsCubit.toggleAutoStartNextPomodoro(
-                    _autoStartNextPomodoro);
-
-                // Zeige Bestätigung
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Pomodoro-Einstellungen gespeichert.')),
-                );
-
-                Navigator.pop(ctx);
-              },
-              child: const Text('Speichern'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
@@ -207,7 +68,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 8),
 
-                // TextField NUR zur Eingabe. Änderung wird in _tempName gepuffert.
+                // Verbindungstatus anzeigen
+                _buildConnectionStatus(state.isESenseConnected),
+
+                const SizedBox(height: 8),
+
+                // TextField zur Eingabe des eSense-Gerätenamens
                 TextField(
                   decoration: const InputDecoration(
                     labelText: 'eSense-Gerätename',
@@ -215,25 +81,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   controller: _deviceNameController,
                   onChanged: (val) {
-                    // Keine Veränderung hier, da Prioritäten fix sind
+                    // Keine unmittelbare Veränderung hier
                   },
                 ),
                 const SizedBox(height: 8),
 
-                // Speichern-Button => erst DANN wird der Name ins State übernommen
+                // Speichern & Verbinden-Button für eSense-Einstellungen
                 ElevatedButton(
-                  onPressed: () {
-                    settingsCubit.setESenseDeviceName(_deviceNameController.text.trim());
-                    // Option: Zeige SnackBar oder so
+                  onPressed: () async {
+                    // Aktualisiere den Gerätenamen
+                    settingsCubit.setESenseDeviceName(
+                        _deviceNameController.text.trim());
+
+                    // Versuche, die Verbindung herzustellen
+                    await settingsCubit.connectESense();
+
+                    // Zeige SnackBar oder andere Bestätigung
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          'eSense-Gerätename gespeichert: "${_deviceNameController.text.trim()}"',
+                          state.isESenseConnected
+                              ? 'eSense-Gerätename gespeichert und verbunden: "${_deviceNameController.text.trim()}"'
+                              : 'eSense-Gerätename gespeichert, Verbindung fehlgeschlagen.',
                         ),
                       ),
                     );
                   },
-                  child: const Text('Speichern'),
+                  child: const Text('Speichern & Verbinden'),
                 ),
                 const SizedBox(height: 16),
 
@@ -245,56 +119,76 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   'Pomodoro-Einstellungen',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
 
-                // Pomodoro-Dauer
-                TextField(
-                  controller: _pomodoroController,
-                  decoration: const InputDecoration(
-                    labelText: 'Dauer einer Pomodoro-Einheit (Minuten)',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
+                // Pomodoro-Dauer mit Slider
+                _buildSlider(
+                  label: 'Dauer einer Pomodoro-Einheit',
+                  value: _pomodoroMinutes,
+                  min: 1,
+                  max: 99,
+                  divisions: 98,
+                  unit: 'Minuten',
+                  onChanged: (double value) {
+                    setState(() {
+                      _pomodoroMinutes = value;
+                    });
+                  },
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
 
-                // Kurze Pause
-                TextField(
-                  controller: _shortBreakController,
-                  decoration: const InputDecoration(
-                    labelText: 'Dauer einer kurzen Pause (Minuten)',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
+                // Dauer einer kurzen Pause mit Slider
+                _buildSlider(
+                  label: 'Dauer einer kurzen Pause',
+                  value: _shortBreakMinutes,
+                  min: 1,
+                  max: 99,
+                  divisions: 98,
+                  unit: 'Minuten',
+                  onChanged: (double value) {
+                    setState(() {
+                      _shortBreakMinutes = value;
+                    });
+                  },
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
 
-                // Lange Pause
-                TextField(
-                  controller: _longBreakController,
-                  decoration: const InputDecoration(
-                    labelText: 'Dauer einer langen Pause (Minuten)',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
+                // Dauer einer langen Pause mit Slider
+                _buildSlider(
+                  label: 'Dauer einer langen Pause',
+                  value: _longBreakMinutes,
+                  min: 1,
+                  max: 99,
+                  divisions: 98,
+                  unit: 'Minuten',
+                  onChanged: (double value) {
+                    setState(() {
+                      _longBreakMinutes = value;
+                    });
+                  },
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
 
-                // Anzahl der Sitzungen vor langer Pause
-                TextField(
-                  controller: _sessionsBeforeLongBreakController,
-                  decoration: const InputDecoration(
-                    labelText:
-                        'Anzahl der Pomodoro-Einheiten vor einer langen Pause',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
+                // Anzahl der Pomodoro-Einheiten vor einer langen Pause mit Slider
+                _buildSlider(
+                  label: 'Anzahl der Pomodoro-Einheiten vor einer langen Pause',
+                  value: _sessionsBeforeLongBreak,
+                  min: 1,
+                  max: 99,
+                  divisions: 98,
+                  unit: '',
+                  onChanged: (double value) {
+                    setState(() {
+                      _sessionsBeforeLongBreak = value;
+                    });
+                  },
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
 
                 // Automatisches Starten der nächsten Pomodoro-Einheit
                 SwitchListTile(
-                  title: const Text('Automatisch nächste Pomodoro-Einheit starten'),
+                  title: const Text(
+                      'Automatisch nächste Pomodoro-Einheit starten'),
                   value: _autoStartNextPomodoro,
                   onChanged: (val) {
                     setState(() {
@@ -302,32 +196,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     });
                   },
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
 
                 // Speichern-Button für Pomodoro-Einstellungen
                 ElevatedButton(
                   onPressed: () {
                     // Validierung der Eingaben
-                    final pomodoroMinutes =
-                        int.tryParse(_pomodoroController.text);
-                    final shortBreakMinutes =
-                        int.tryParse(_shortBreakController.text);
-                    final longBreakMinutes =
-                        int.tryParse(_longBreakController.text);
-                    final sessionsBeforeLongBreak =
-                        int.tryParse(_sessionsBeforeLongBreakController.text);
+                    final pomodoroMinutes = _pomodoroMinutes.toInt(); // Direkt vom Slider
+                    final shortBreakMinutes = _shortBreakMinutes.toInt(); // Direkt vom Slider
+                    final longBreakMinutes = _longBreakMinutes.toInt(); // Direkt vom Slider
+                    final sessionsBeforeLongBreak = _sessionsBeforeLongBreak.toInt(); // Direkt vom Slider
 
-                    if (pomodoroMinutes == null ||
-                        shortBreakMinutes == null ||
-                        longBreakMinutes == null ||
-                        sessionsBeforeLongBreak == null ||
-                        pomodoroMinutes <= 0 ||
+                    if (pomodoroMinutes <= 0 ||
                         shortBreakMinutes <= 0 ||
                         longBreakMinutes <= 0 ||
                         sessionsBeforeLongBreak <= 0) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                            content: Text('Bitte geben Sie gültige Werte ein.')),
+                            content:
+                                Text('Bitte geben Sie gültige Werte ein.')),
                       );
                       return;
                     }
@@ -347,7 +234,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     // Zeige Bestätigung
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                          content: Text('Pomodoro-Einstellungen gespeichert.')),
+                          content:
+                              Text('Pomodoro-Einstellungen gespeichert.')),
                     );
                   },
                   child: const Text('Speichern'),
@@ -357,6 +245,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+
+  /// Methode zur Erstellung eines Sliders mit einem Label
+  Widget _buildSlider({
+    required String label,
+    required double value,
+    required double min,
+    required double max,
+    required int divisions,
+    required String unit,
+    required ValueChanged<double> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$label: ${value.toInt()} ${unit}',
+          style: const TextStyle(fontSize: 16),
+        ),
+        Slider(
+          value: value,
+          min: min,
+          max: max,
+          divisions: divisions,
+          label: '${value.toInt()}',
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
+
+  /// Methode zur Anzeige des Verbindungstatus
+  Widget _buildConnectionStatus(bool isConnected) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      decoration: BoxDecoration(
+        color: isConnected ? Colors.green : Colors.red,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        isConnected ? 'Verbunden' : 'Nicht verbunden',
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );

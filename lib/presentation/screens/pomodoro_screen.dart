@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:audioplayers/audioplayers.dart'; // Importiere audioplayers
 import '../../logic/tasks/tasks_cubit.dart';
 import '../../data/models/task_model.dart';
 import '../../logic/settings/settings_cubit.dart';
@@ -30,6 +31,27 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   late StreamSubscription<String> _movementSub;
 
   TaskModel? _nextTask; // Variable für die nächste Aufgabe
+
+  // AudioPlayer-Instanzen
+  final AudioPlayer _focusPlayer = AudioPlayer();
+  final AudioPlayer _movePlayer = AudioPlayer();
+
+  // Listen der Audio-Dateien
+  final List<String> _focusAudioPaths = [
+    'audio/focus1.mp3',
+    'audio/focus2.mp3',
+    'audio/focus3.mp3',
+    'audio/focus4.mp3',
+  ];
+
+  final List<String> _moveAudioPaths = [
+    'audio/move1.mp3',
+    'audio/move2.mp3',
+    'audio/move3.mp3',
+    'audio/move4.mp3',
+  ];
+
+  final Random _random = Random();
 
   @override
   void initState() {
@@ -73,6 +95,9 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     if (context.read<TasksCubit>().state is TasksLoaded) {
       _nextTask = context.read<TasksCubit>().getNextTask();
     }
+
+    // Lade die Audio-Dateien
+    _loadAudioFiles();
   }
 
   @override
@@ -80,6 +105,11 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     timer.dispose(); // Dispose des Timers
     _movementSub.cancel();
     _eSenseService.dispose(); // Dispose des ESenseService
+
+    // Dispose der AudioPlayer-Instanzen
+    _focusPlayer.dispose();
+    _movePlayer.dispose();
+
     super.dispose();
   }
 
@@ -93,7 +123,21 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
       setState(() {
         _movementStatus = status;
       });
+
+      // Audio abspielen basierend auf dem Bewegungsstatus und dem aktuellen Timer-Zustand
+      if (!timer.isBreak && status == 'Bewegung') {
+        _playFocusAudio();
+      } else if (timer.isBreak && status == 'Ruhig') {
+        _playMoveAudio();
+      }
     });
+  }
+
+  // Lade die Audio-Dateien (optional, da wir die Audio-Dateien bei Bedarf laden)
+  void _loadAudioFiles() async {
+    // Hier können wir vorab die Audio-Dateien laden, falls gewünscht
+    // In diesem Beispiel laden wir sie bei Bedarf
+    // Dies ist optional und kann weggelassen werden
   }
 
   void _onTimerUpdate() {
@@ -427,6 +471,36 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
           ),
         ),
       );
+
+  /// Methode zum Abspielen der Focus-Audio-Datei zufällig ausgewählt
+  void _playFocusAudio() async {
+    try {
+      // Wähle zufällig eine Focus-Audio-Datei aus der Liste
+      final focusAudio = _focusAudioPaths[_random.nextInt(_focusAudioPaths.length)];
+      await _focusPlayer.stop(); // Stoppe vorherige Wiedergaben
+      await _focusPlayer.play(AssetSource(focusAudio));
+    } catch (e) {
+      debugPrint('Fehler beim Abspielen der Focus-Audio-Datei: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Fehler beim Abspielen der Fokus-Audio-Datei.')),
+      );
+    }
+  }
+
+  /// Methode zum Abspielen der Move-Audio-Datei zufällig ausgewählt
+  void _playMoveAudio() async {
+    try {
+      // Wähle zufällig eine Move-Audio-Datei aus der Liste
+      final moveAudio = _moveAudioPaths[_random.nextInt(_moveAudioPaths.length)];
+      await _movePlayer.stop(); // Stoppe vorherige Wiedergaben
+      await _movePlayer.play(AssetSource(moveAudio));
+    } catch (e) {
+      debugPrint('Fehler beim Abspielen der Move-Audio-Datei: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Fehler beim Abspielen der Bewegungs-Audio-Datei.')),
+      );
+    }
+  }
 }
 
 /// Benutzerdefinierte RadialProgressBar ohne externe Pakete

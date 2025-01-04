@@ -174,10 +174,3 @@ class _EnvironmentScreenState extends State<EnvironmentScreen> {
     );
   }
 }
-
-// Hilfsklasse zum Speichern der Magnitude und des Zeitstempels
-class _AccelSample {
-  final double magnitude;
-  final DateTime time;
-  _AccelSample(this.magnitude, this.time);
-}

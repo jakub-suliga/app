@@ -24,6 +24,7 @@ dependencies:
   uuid: ^4.5.1
   intl: ^0.20.1
   shared_preferences: ^2.0.15
+  audioplayers: ^6.1.0
   
 
 dev_dependencies:
@@ -47,4 +48,12 @@ flutter:
   uses-material-design: true
   assets:
       - assets/images/intro_1.png
+      - assets/audio/focus1.mp3
+      - assets/audio/focus2.mp3
+      - assets/audio/focus3.mp3
+      - assets/audio/focus4.mp3
+      - assets/audio/move1.mp3
+      - assets/audio/move2.mp3
+      - assets/audio/move3.mp3
+      - assets/audio/move4.mp3
     
