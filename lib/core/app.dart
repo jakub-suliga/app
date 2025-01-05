@@ -1,6 +1,4 @@
-// lib/core/app.dart
-
 import 'package:flutter/material.dart';
 
-/// Globale Variable für den NavigatorKey (für ScaffoldMessenger)
+/// Ein globaler Schlüssel für den Navigator, der für die Navigation und das Anzeigen von Nachrichten verwendet wird.
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
