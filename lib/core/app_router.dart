@@ -21,7 +21,7 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const PomodoroScreen());
 
       case '/tasks':
-        return MaterialPageRoute(builder: (_) => const TasksScreen());
+        return MaterialPageRoute(builder: (_) => const TaskScreen());
 
       case '/settings':
         return MaterialPageRoute(builder: (_) => const SettingsScreen());

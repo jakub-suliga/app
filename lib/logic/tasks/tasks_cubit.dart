@@ -1,109 +1,123 @@
 // lib/logic/tasks/tasks_cubit.dart
 
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../data/models/task_model.dart';
-import '../../logic/history/history_cubit.dart';
-import '../../data/models/history_entry_model.dart'; // Importiere PomodoroDetail
+import '../../data/repositories/tasks_repository.dart';
 
 part 'tasks_state.dart';
 
 class TasksCubit extends Cubit<TasksState> {
-  final HistoryCubit historyCubit; // Füge HistoryCubit hinzu
+  final TasksRepository tasksRepository;
 
-  TasksCubit({required this.historyCubit}) : super(TasksInitial());
+  TasksCubit({required this.tasksRepository}) : super(TasksInitial()) {
+    loadTasks();
+  }
 
-  final List<TaskModel> _tasks = [];
-
-  /// Lädt die Aufgabenliste
-  void loadTasks() {
+  /// Lädt alle Aufgaben und trennt sie in aktive und erledigte Aufgaben
+  Future<void> loadTasks() async {
     emit(TasksLoading());
     try {
-      // Hier können Sie Ihre Daten aus einer Datenbank oder einem Service laden
-      // Für dieses Beispiel verwenden wir eine leere Liste
-      emit(TasksLoaded(List.from(_tasks)));
+      final tasks = await tasksRepository.getTasks();
+      final activeTasks = tasks.where((task) => !task.isCompleted).toList();
+      final completedTasks = tasks.where((task) => task.isCompleted).toList();
+      emit(TasksLoaded(activeTasks: activeTasks, completedTasks: completedTasks));
     } catch (e) {
-      emit(TasksError('Fehler beim Laden der Aufgaben.'));
+      emit(TasksError(e.toString()));
     }
   }
 
   /// Fügt eine neue Aufgabe hinzu
-  void addTask(TaskModel task) {
-    _tasks.add(task);
-    emit(TasksLoaded(List.from(_tasks)));
-  }
-
-  /// Entfernt eine Aufgabe basierend auf ihrer ID
-  void removeTask(String taskId) {
-    _tasks.removeWhere((task) => task.id == taskId);
-    emit(TasksLoaded(List.from(_tasks)));
+  Future<void> addTask(TaskModel task) async {
+    try {
+      await tasksRepository.addTask(task);
+      loadTasks();
+    } catch (e) {
+      emit(TasksError(e.toString()));
+    }
   }
 
   /// Aktualisiert eine bestehende Aufgabe
-  void updateTask(TaskModel updatedTask) {
-    final index = _tasks.indexWhere((task) => task.id == updatedTask.id);
-    if (index != -1) {
-      _tasks[index] = updatedTask;
-      emit(TasksLoaded(List.from(_tasks)));
+  Future<void> updateTask(TaskModel updatedTask) async {
+    try {
+      await tasksRepository.updateTask(updatedTask);
+      loadTasks();
+    } catch (e) {
+      emit(TasksError(e.toString()));
     }
   }
 
-  /// Bestimmt die nächste Aufgabe basierend auf Enddatum, Priorität und Dauer
-  TaskModel? getNextTask() {
-    final now = DateTime.now();
-    final pendingTasks = _tasks.where((task) =>
-      (task.endDate == null || task.endDate!.isAfter(now))
-    ).toList();
-
-    if (pendingTasks.isEmpty) return null;
-
-    pendingTasks.sort((a, b) {
-      // 1. Sortiere nach Enddatum (null wird als sehr weit in der Zukunft betrachtet)
-      DateTime aDate = a.endDate ?? DateTime(2100);
-      DateTime bDate = b.endDate ?? DateTime(2100);
-      int dateComparison = aDate.compareTo(bDate);
-      if (dateComparison != 0) return dateComparison;
-
-      // 2. Sortiere nach Priorität (Hoch > Mittel > Niedrig)
-      int priorityA = _priorityValue(a.priority);
-      int priorityB = _priorityValue(b.priority);
-      if (priorityA != priorityB) return priorityB.compareTo(priorityA); // Höhere Priorität zuerst
-
-      // 3. Sortiere nach kürzerer Dauer
-      return a.duration.compareTo(b.duration);
-    });
-
-    return pendingTasks.first;
+  /// Markiert eine Aufgabe als abgeschlossen
+  Future<void> markTaskAsCompleted(String taskId) async {
+    try {
+      final tasks = await tasksRepository.getTasks();
+      final task = tasks.firstWhere((task) => task.id == taskId);
+      final updatedTask = task.copyWith(isCompleted: true);
+      await tasksRepository.updateTask(updatedTask);
+      loadTasks();
+    } catch (e) {
+      emit(TasksError(e.toString()));
+    }
   }
 
-  /// Hilfsmethode zur Umwandlung der Priorität in einen numerischen Wert
+  /// Stellt eine erledigte Aufgabe wieder her
+  Future<void> restoreTask(String taskId) async {
+    try {
+      final tasks = await tasksRepository.getTasks();
+      final task = tasks.firstWhere((task) => task.id == taskId);
+      final updatedTask = task.copyWith(isCompleted: false);
+      await tasksRepository.updateTask(updatedTask);
+      loadTasks();
+    } catch (e) {
+      emit(TasksError(e.toString()));
+    }
+  }
+
+  /// Entfernt eine Aufgabe vollständig
+  Future<void> removeTask(String taskId) async {
+    try {
+      await tasksRepository.removeTask(taskId);
+      loadTasks();
+    } catch (e) {
+      emit(TasksError(e.toString()));
+    }
+  }
+
+  /// Gibt die nächste aktive Aufgabe zurück (z.B. nach Priorität sortiert)
+  TaskModel? getNextTask() {
+    if (state is TasksLoaded) {
+      final activeTasks = (state as TasksLoaded).activeTasks;
+      if (activeTasks.isNotEmpty) {
+        // Beispiel: Sortiere nach Priorität und Fälligkeitsdatum
+        activeTasks.sort((a, b) {
+          int priorityComparison = _priorityValue(a.priority).compareTo(_priorityValue(b.priority));
+          if (priorityComparison != 0) return priorityComparison;
+          if (a.endDate != null && b.endDate != null) {
+            return a.endDate!.compareTo(b.endDate!);
+          } else if (a.endDate != null) {
+            return -1;
+          } else if (b.endDate != null) {
+            return 1;
+          }
+          return 0;
+        });
+        return activeTasks.first;
+      }
+    }
+    return null;
+  }
+
+  /// Hilfsmethode zur Prioritätsbewertung
   int _priorityValue(String priority) {
     switch (priority.toLowerCase()) {
       case 'hoch':
-        return 3;
+        return 1;
       case 'mittel':
         return 2;
       case 'niedrig':
-        return 1;
+        return 3;
       default:
-        return 2; // Standardpriorität
+        return 4;
     }
-  }
-
-  /// Methode zum Hinzufügen einer abgeschlossenen Pomodoro-Session zur Historie
-  void addCompletedPomodoro(TaskModel task, Duration duration) {
-    final pomodoroDetail = PomodoroDetail(
-      duration: duration,
-      taskTitle: task.title,
-    );
-    final today = DateTime.now();
-    historyCubit.addPomodoro(today, pomodoroDetail).then((_) {
-      // Optional: Zeige eine Bestätigung an, dass die Historie aktualisiert wurde
-      debugPrint('Pomodoro zur Historie hinzugefügt.');
-    }).catchError((error) {
-      // Fehlerbehandlung
-      debugPrint('Fehler beim Hinzufügen der Pomodoro zur Historie: $error');
-    });
   }
 }

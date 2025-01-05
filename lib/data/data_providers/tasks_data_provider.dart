@@ -1,22 +1,47 @@
+// lib/data/data_providers/tasks_data_provider.dart
+
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../models/task_model.dart';
 
 class TasksDataProvider {
-  final List<TaskModel> _tasks = [];
+  final String _tasksKey = 'tasks';
 
-  Future<List<TaskModel>> loadTasks() async => _tasks;
-
-  Future<void> saveTask(TaskModel task) async {
-    _tasks.add(task);
-  }
-
-  Future<void> deleteTask(TaskModel task) async {
-    _tasks.removeWhere((t) => t.id == task.id);
-  }
-
-  Future<void> updateTask(TaskModel task) async {
-    final index = _tasks.indexWhere((t) => t.id == task.id);
-    if (index >= 0) {
-      _tasks[index] = task;
+  Future<List<TaskModel>> fetchTasks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final tasksString = prefs.getString(_tasksKey);
+    if (tasksString != null) {
+      final List<dynamic> jsonData = json.decode(tasksString);
+      return jsonData.map((e) => TaskModel.fromJson(e)).toList();
+    } else {
+      return [];
     }
+  }
+
+  Future<void> addTask(TaskModel task) async {
+    final tasks = await fetchTasks();
+    tasks.add(task);
+    await _saveTasks(tasks);
+  }
+
+  Future<void> updateTask(TaskModel updatedTask) async {
+    final tasks = await fetchTasks();
+    final index = tasks.indexWhere((task) => task.id == updatedTask.id);
+    if (index != -1) {
+      tasks[index] = updatedTask;
+      await _saveTasks(tasks);
+    }
+  }
+
+  Future<void> removeTask(String taskId) async {
+    final tasks = await fetchTasks();
+    tasks.removeWhere((task) => task.id == taskId);
+    await _saveTasks(tasks);
+  }
+
+  Future<void> _saveTasks(List<TaskModel> tasks) async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<Map<String, dynamic>> jsonData = tasks.map((task) => task.toJson()).toList();
+    await prefs.setString(_tasksKey, json.encode(jsonData));
   }
 }

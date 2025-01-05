@@ -14,12 +14,16 @@ class TasksInitial extends TasksState {}
 class TasksLoading extends TasksState {}
 
 class TasksLoaded extends TasksState {
-  final List<TaskModel> tasks;
+  final List<TaskModel> activeTasks;
+  final List<TaskModel> completedTasks;
 
-  const TasksLoaded(this.tasks);
+  const TasksLoaded({
+    required this.activeTasks,
+    required this.completedTasks,
+  });
 
   @override
-  List<Object> get props => [tasks];
+  List<Object> get props => [activeTasks, completedTasks];
 }
 
 class TasksError extends TasksState {

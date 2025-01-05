@@ -6,12 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:audioplayers/audioplayers.dart'; // Importiere audioplayers
-import '../../logic/tasks/tasks_cubit.dart';
-import '../../data/models/task_model.dart';
-import '../../logic/settings/settings_cubit.dart';
-import '../../service/eSenseService.dart'; // Stellen Sie sicher, dass dieser Pfad korrekt ist
-import '../../logic/history/history_cubit.dart'; // Importiere HistoryCubit
-import '../../data/models/history_entry_model.dart'; // Importiere PomodoroDetail
+import '../../../logic/tasks/tasks_cubit.dart';
+import '../../../data/models/task_model.dart';
+import '../../../logic/settings/settings_cubit.dart';
+import '../../../service/eSenseService.dart'; // Stellen Sie sicher, dass dieser Pfad korrekt ist
+import '../../../logic/history/history_cubit.dart'; // Importiere HistoryCubit
+import '../../../data/models/history_entry_model.dart'; // Importiere PomodoroDetail
+import '../../../core/app.dart'; // Importiere den navigatorKey
 
 class PomodoroScreen extends StatefulWidget {
   const PomodoroScreen({super.key});
@@ -53,6 +54,31 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   ];
 
   final Random _random = Random();
+
+  // Wochenübersicht
+  DateTime _currentWeekStart = _findFirstDayOfWeek(DateTime.now());
+
+  /// Findet den Montag der gegebenen Woche
+  static DateTime _findFirstDayOfWeek(DateTime date) {
+    // In Dart ist Montag der erste Tag der Woche (1)
+    int subtractDays = date.weekday - DateTime.monday;
+    return DateTime(date.year, date.month, date.day)
+        .subtract(Duration(days: subtractDays));
+  }
+
+  /// Geht zur vorherigen Woche
+  void _goToPreviousWeek() {
+    setState(() {
+      _currentWeekStart = _currentWeekStart.subtract(Duration(days: 7));
+    });
+  }
+
+  /// Geht zur nächsten Woche
+  void _goToNextWeek() {
+    setState(() {
+      _currentWeekStart = _currentWeekStart.add(Duration(days: 7));
+    });
+  }
 
   @override
   void initState() {
@@ -131,7 +157,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     });
   }
 
-
   void _onTimerUpdate() {
     setState(() {
       _currentSessionProgress = double.parse(
@@ -174,10 +199,10 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
         final newDuration = selectedTask.duration - pomodoroDuration;
 
         if (newDuration <= Duration.zero) {
-          // Aufgabe ist abgeschlossen und wird entfernt
-          tasksCubit.removeTask(selectedTask.id);
+          // Aufgabe ist abgeschlossen und wird als erledigt markiert
+          tasksCubit.markTaskAsCompleted(selectedTask.id);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Aufgabe "${selectedTask.title}" abgeschlossen und entfernt!')),
+            SnackBar(content: Text('Aufgabe "${selectedTask.title}" abgeschlossen!')),
           );
         } else {
           // Aktualisieren Sie die verbleibende Dauer
@@ -257,7 +282,8 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(isSession ? 'Pomodoro abgeschlossen!' : 'Pause beendet!'),
+          title:
+              Text(isSession ? 'Pomodoro abgeschlossen!' : 'Pause beendet!'),
           content: Text(isSession
               ? 'Gut gemacht! Zeit für eine Pause.'
               : 'Pause beendet! Zeit für eine neue Session.'),
@@ -324,7 +350,8 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (_nextTask!.endDate != null)
-                Text('Fällig bis: ${DateFormat.yMd().format(_nextTask!.endDate!)}'),
+                Text(
+                    'Fällig bis: ${DateFormat.yMd().format(_nextTask!.endDate!)}'),
               Text('Priorität: ${_nextTask!.priority}'),
               Text('Verbleibende Dauer: ${_formatDuration(_nextTask!.duration)}'),
             ],
@@ -412,11 +439,127 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     return '${hours}h ${minutes}m';
   }
 
+  /// Widget für die Wochenübersicht mit Navigationspfeilen
+  Widget _weeklyProgressWidget() {
+    return Card(
+      color: Colors.blue.shade50, // Gleiche Hintergrundfarbe wie andere Cards
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 8.0),
+        child: BlocBuilder<HistoryCubit, HistoryState>(
+          builder: (context, state) {
+            if (state is! HistoryLoaded) {
+              return SizedBox.shrink(); // Kein Inhalt, wenn die Historie noch nicht geladen ist
+            }
+
+            final history = state.history;
+            // Erstelle eine Liste der Wochentage von Montag bis Sonntag
+            List<DateTime> weekDays = List.generate(7, (index) {
+              return _currentWeekStart.add(Duration(days: index));
+            });
+
+            // Überprüfe, ob an jedem Tag der Woche eine Aufgabe erledigt wurde
+            List<bool> tasksCompleted = weekDays.map((day) {
+              return history.any((entry) =>
+                  _isSameDay(entry.date, day) && entry.pomodoroCount > 0);
+            }).toList();
+
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Linker Pfeil
+                IconButton(
+                  icon: const Icon(Icons.arrow_left),
+                  onPressed: _goToPreviousWeek,
+                ),
+                // Wochentage in Kreisen innerhalb eines Flexible Widgets
+                Flexible(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: List.generate(7, (index) {
+                        final day = weekDays[index];
+                        final isCompleted = tasksCompleted[index];
+                        final dayLabel = DateFormat.E().format(day); // MO, DI, etc.
+
+                        return Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                          child: Column(
+                            children: [
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 500),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isCompleted ? Colors.green : Colors.grey,
+                                    width: 2.0,
+                                  ),
+                                  boxShadow: isCompleted
+                                      ? [
+                                          BoxShadow(
+                                            color: Colors.green.withOpacity(0.5),
+                                            spreadRadius: 2,
+                                            blurRadius: 5,
+                                          ),
+                                        ]
+                                      : [],
+                                ),
+                                child: CircleAvatar(
+                                  radius: 16, // Reduzierte Größe
+                                  backgroundColor: Colors.white, // Innere Farbe weiß
+                                  child: Text(
+                                    dayLabel.substring(0, 2), // Erste zwei Buchstaben
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                      fontSize: 12, // Kleinere Schriftgröße
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                DateFormat.d().format(day), // Tag der Woche
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                ),
+                // Rechter Pfeil
+                IconButton(
+                  icon: const Icon(Icons.arrow_right),
+                  onPressed: _goToNextWeek,
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  /// Hilfsmethode zum Vergleichen von zwei Daten (ohne Zeit)
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Pomodoro Timer'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.task),
+            onPressed: () {
+              Navigator.pushNamed(context, '/tasks');
+            },
+            tooltip: 'Aufgaben verwalten',
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(5.0, 30.0, 5.0, 15.0),
@@ -429,6 +572,8 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
             _timerWidget(),
             const SizedBox(height: 20),
             _control(),
+            const SizedBox(height: 20),
+            _weeklyProgressWidget(), // Hinzugefügtes Widget für die Wochenübersicht
           ],
         ),
       ),
@@ -536,7 +681,8 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   void _playFocusAudio() async {
     try {
       // Wähle zufällig eine Focus-Audio-Datei aus der Liste
-      final focusAudio = _focusAudioPaths[_random.nextInt(_focusAudioPaths.length)];
+      final focusAudio =
+          _focusAudioPaths[_random.nextInt(_focusAudioPaths.length)];
       await _focusPlayer.stop(); // Stoppe vorherige Wiedergaben
       await _focusPlayer.play(AssetSource(focusAudio));
     } catch (e) {
@@ -551,7 +697,8 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   void _playMoveAudio() async {
     try {
       // Wähle zufällig eine Move-Audio-Datei aus der Liste
-      final moveAudio = _moveAudioPaths[_random.nextInt(_moveAudioPaths.length)];
+      final moveAudio =
+          _moveAudioPaths[_random.nextInt(_moveAudioPaths.length)];
       await _movePlayer.stop(); // Stoppe vorherige Wiedergaben
       await _movePlayer.play(AssetSource(moveAudio));
     } catch (e) {

@@ -20,7 +20,7 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
   final List<_NavItem> allItems = [
     _NavItem(label: 'Environment', icon: Icons.graphic_eq, widget: const EnvironmentScreen()),
     _NavItem(label: 'Pomodoro', icon: Icons.timer, widget: const PomodoroScreen()),
-    _NavItem(label: 'Aufgabenliste', icon: Icons.check_box_outlined, widget: const TasksScreen()),
+    _NavItem(label: 'Aufgabenliste', icon: Icons.check_box_outlined, widget: const TaskScreen()),
     _NavItem(label: 'Historie', icon: Icons.history, widget: const HistoryScreen()), // Neuer Navigationspunkt
     _NavItem(label: 'Settings', icon: Icons.settings, widget: const SettingsScreen()),
   ];

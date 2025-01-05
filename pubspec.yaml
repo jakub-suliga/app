@@ -57,4 +57,5 @@ flutter:
       - assets/audio/move2.mp3
       - assets/audio/move3.mp3
       - assets/audio/move4.mp3
+      - assets/audio/alarm.mp3
     

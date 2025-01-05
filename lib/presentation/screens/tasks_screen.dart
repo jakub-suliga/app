@@ -1,4 +1,4 @@
-// lib/screens/tasks_screen.dart
+// lib/presentation/screens/task_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -6,42 +6,250 @@ import '../../../logic/tasks/tasks_cubit.dart';
 import '../../../data/models/task_model.dart';
 import 'package:intl/intl.dart';
 import '../../core/constants.dart'; // Importiere die festen Prioritäten
+import 'package:uuid/uuid.dart'; // Für eindeutige IDs
 
-class TasksScreen extends StatefulWidget {
-  const TasksScreen({super.key});
+class TaskScreen extends StatelessWidget {
+  const TaskScreen({super.key});
   
-  @override
-  State<TasksScreen> createState() => _TasksScreenState();
-}
-
-class _TasksScreenState extends State<TasksScreen> {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<TasksCubit, TasksState>(
       builder: (context, state) {
-        List<TaskModel> tasks = [];
+        List<TaskModel> activeTasks = [];
+        List<TaskModel> completedTasks = [];
         if (state is TasksLoaded) {
-          tasks = state.tasks;
+          activeTasks = state.activeTasks;
+          completedTasks = state.completedTasks;
         }
 
         return Scaffold(
           appBar: AppBar(
             title: const Text('Aufgabenliste'),
-            // Entfernt die actions: Such- und Filter-Buttons
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: () {
+                  context.read<TasksCubit>().loadTasks();
+                },
+                tooltip: 'Aufgaben aktualisieren',
+              ),
+            ],
           ),
           body: (state is TasksLoading)
               ? const Center(child: CircularProgressIndicator())
-              : TaskList(tasks: tasks), // Übergebe die Aufgaben direkt an TaskList
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Aktive Aufgaben
+                      const Text(
+                        'Aktive Aufgaben',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 10),
+                      activeTasks.isEmpty
+                          ? const Text('Keine aktiven Aufgaben.')
+                          : Column(
+                              children: activeTasks.map((task) => _buildTaskItem(context, task)).toList(),
+                            ),
+                      const SizedBox(height: 20),
+                      // Erledigte Aufgaben
+                      const Text(
+                        'Erledigte Aufgaben',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 10),
+                      completedTasks.isEmpty
+                          ? const Text('Keine erledigten Aufgaben.')
+                          : Column(
+                              children: completedTasks.map((task) => _buildCompletedTaskItem(context, task)).toList(),
+                            ),
+                    ],
+                  ),
+                ),
           floatingActionButton: FloatingActionButton(
-            onPressed: _createTask,
+            onPressed: () => _showAddTaskDialog(context),
             child: const Icon(Icons.add),
+            tooltip: 'Neue Aufgabe hinzufügen',
           ),
         );
       },
     );
   }
 
-  void _createTask() {
+  Widget _buildTaskItem(BuildContext context, TaskModel task) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      child: ListTile(
+        leading: SizedBox(
+          width: 120, // Angepasste Breite für Label und Checkbox
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Label "Erledigt?:"
+              const Text(
+                'Erledigt?:',
+                style: TextStyle(fontSize: 12),
+              ),
+              const SizedBox(width: 5),
+              // Checkbox
+              Transform.scale(
+                scale: 0.8, // Verkleinert die Checkbox auf 80%
+                child: Checkbox(
+                  value: task.isCompleted,
+                  onChanged: (val) {
+                    if (val != null && val) {
+                      context.read<TasksCubit>().markTaskAsCompleted(task.id);
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        title: GestureDetector(
+          onTap: () => _editTask(context, task),
+          child: Text(
+            task.title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+            overflow: TextOverflow.ellipsis, // Verhindert Überlauf
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              task.description,
+              overflow: TextOverflow.ellipsis, // Verhindert Überlauf
+            ),
+            if (task.endDate != null)
+              Text(
+                'Fällig bis: ${DateFormat.yMd().format(task.endDate!)}',
+                overflow: TextOverflow.ellipsis, // Verhindert Überlauf
+              ),
+            Text(
+              'Priorität: ${task.priority}',
+              overflow: TextOverflow.ellipsis, // Verhindert Überlauf
+            ),
+            Text(
+              'Verbleibende Dauer: ${_formatDuration(task.duration)}',
+              overflow: TextOverflow.ellipsis, // Verhindert Überlauf
+            ),
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Bearbeiten-Icon (Stift)
+            IconButton(
+              icon: const Icon(Icons.edit, color: Colors.blue, size: 20),
+              onPressed: () => _editTask(context, task),
+              tooltip: 'Aufgabe bearbeiten',
+            ),
+            // Löschen-Icon (Müll)
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+              onPressed: () {
+                // Bestätigungsdialog vor dem Löschen
+                _confirmDelete(context, task);
+              },
+              tooltip: 'Aufgabe löschen',
+            ),
+          ],
+        ),
+        onTap: () => _editTask(context, task),
+      ),
+    );
+  }
+
+  Widget _buildCompletedTaskItem(BuildContext context, TaskModel task) {
+    return Card(
+      color: Colors.grey.shade200,
+      child: ListTile(
+        title: Text(
+          task.title,
+          style: const TextStyle(decoration: TextDecoration.lineThrough),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              task.description,
+              overflow: TextOverflow.ellipsis, // Verhindert Überlauf
+            ),
+            if (task.endDate != null)
+              Text(
+                'Fällig bis: ${DateFormat.yMd().format(task.endDate!)}',
+                overflow: TextOverflow.ellipsis, // Verhindert Überlauf
+              ),
+            Text(
+              'Priorität: ${task.priority}',
+              overflow: TextOverflow.ellipsis, // Verhindert Überlauf
+            ),
+            Text(
+              'Dauer: ${_formatDuration(task.duration)}',
+              overflow: TextOverflow.ellipsis, // Verhindert Überlauf
+            ),
+          ],
+        ),
+        trailing: IconButton(
+          icon: const Icon(Icons.undo, color: Colors.blue, size: 20),
+          onPressed: () {
+            context.read<TasksCubit>().restoreTask(task.id);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Aufgabe "${task.title}" wiederhergestellt.')),
+            );
+          },
+          tooltip: 'Aufgabe wiederherstellen',
+        ),
+      ),
+    );
+  }
+
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    return '${hours}h ${minutes}m';
+  }
+
+  void _editTask(BuildContext context, TaskModel task) {
+    // Öffne den TaskDialog mit der bestehenden Aufgabe
+    showDialog(
+      context: context,
+      builder: (context) => TaskDialog(task: task),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, TaskModel task) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Aufgabe löschen'),
+        content: Text('Möchten Sie die Aufgabe "${task.title}" wirklich löschen?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Abbrechen'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              context.read<TasksCubit>().removeTask(task.id);
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Aufgabe "${task.title}" gelöscht.')),
+              );
+            },
+            child: const Text('Löschen'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddTaskDialog(BuildContext context) {
     // Öffne den TaskDialog ohne eine bestehende Aufgabe
     showDialog(
       context: context,
@@ -266,12 +474,13 @@ class _TaskDialogState extends State<TaskDialog> {
       if (widget.task == null) {
         // Neue Aufgabe erstellen
         final newTask = TaskModel(
-          id: UniqueKey().toString(),
+          id: const Uuid().v4(),
           title: _title,
           description: _description,
           endDate: _endDate,
           priority: _priority,
           duration: duration,
+          isCompleted: false,
         );
 
         context.read<TasksCubit>().addTask(newTask);
@@ -290,156 +499,5 @@ class _TaskDialogState extends State<TaskDialog> {
         Navigator.of(context).pop();
       }
     }
-  }
-}
-
-/// TaskList Widget
-class TaskList extends StatelessWidget {
-  final List<TaskModel> tasks;
-
-  const TaskList({super.key, required this.tasks});
-
-  String _formatDuration(Duration duration) {
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes.remainder(60);
-    return '${hours}h ${minutes}m';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (tasks.isEmpty) {
-      return const Center(child: Text('Keine Aufgaben vorhanden.'));
-    }
-
-    return ListView.builder(
-      itemCount: tasks.length,
-      itemBuilder: (context, index) {
-        final task = tasks[index];
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-          child: ListTile(
-            // Optimierter leading Bereich mit Label "Abhacken:" und Checkbox
-            leading: SizedBox(
-              width: 120, // Angepasste Breite für Label und Checkbox
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Label "Abhacken:"
-                  Expanded(
-                    child: Text(
-                      'Erledigt?:',
-                      style: const TextStyle(fontSize: 12),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  // Verkleinerte Checkbox
-                  Transform.scale(
-                    scale: 0.8, // Verkleinert die Checkbox auf 80%
-                    child: Checkbox(
-                      value: false, // Optional: Verbinde mit einer Eigenschaft wie `isDone`
-                      onChanged: (val) {
-                        // Beispiel: Aufgabe als erledigt markieren oder entfernen
-                        // Hier wird die Aufgabe entfernt, wie im ursprünglichen Code
-                        context.read<TasksCubit>().removeTask(task.id);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Aufgabe "${task.title}" entfernt.')),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            title: GestureDetector(
-              onTap: () => _editTask(context, task),
-              child: Text(
-                task.title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-                overflow: TextOverflow.ellipsis, // Verhindert Überlauf
-              ),
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  task.description,
-                  overflow: TextOverflow.ellipsis, // Verhindert Überlauf
-                ),
-                if (task.endDate != null)
-                  Text(
-                    'Fällig bis: ${DateFormat.yMd().format(task.endDate!)}',
-                    overflow: TextOverflow.ellipsis, // Verhindert Überlauf
-                  ),
-                Text(
-                  'Priorität: ${task.priority}',
-                  overflow: TextOverflow.ellipsis, // Verhindert Überlauf
-                ),
-                Text(
-                  'Verbleibende Dauer: ${_formatDuration(task.duration)}',
-                  overflow: TextOverflow.ellipsis, // Verhindert Überlauf
-                ),
-              ],
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Bearbeiten-Icon (Stift)
-                IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.blue, size: 20),
-                  onPressed: () => _editTask(context, task),
-                  tooltip: 'Aufgabe bearbeiten',
-                ),
-                // Löschen-Icon (Müll)
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-                  onPressed: () {
-                    // Bestätigungsdialog vor dem Löschen
-                    _confirmDelete(context, task);
-                  },
-                  tooltip: 'Aufgabe löschen',
-                ),
-              ],
-            ),
-            onTap: () => _editTask(context, task),
-          ),
-        );
-      },
-    );
-  }
-
-  void _editTask(BuildContext context, TaskModel task) {
-    // Öffne den TaskDialog mit der bestehenden Aufgabe
-    showDialog(
-      context: context,
-      builder: (context) => TaskDialog(task: task),
-    );
-  }
-
-  void _confirmDelete(BuildContext context, TaskModel task) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Aufgabe löschen'),
-        content: Text('Möchten Sie die Aufgabe "${task.title}" wirklich löschen?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Abbrechen'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              context.read<TasksCubit>().removeTask(task.id);
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Aufgabe "${task.title}" gelöscht.')),
-              );
-            },
-            child: const Text('Löschen'),
-          ),
-        ],
-      ),
-    );
   }
 }
