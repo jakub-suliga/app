@@ -32,6 +32,7 @@ dependencies:
 dev_dependencies:
   hive_generator: ^2.0.1
   build_runner: ^2.4.14
+  flutter_launcher_icons: ^0.14.2
   flutter_test:
     sdk: flutter
 
@@ -44,6 +45,14 @@ dev_dependencies:
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
+
+flutter_icons:
+  android: true
+  ios: false
+  image_path: "assets/images/logo.png" # Pfad zu deinem Icon
+  adaptive_icon_background: "#FFFFFF" # Hintergrundfarbe für adaptive Icons
+  adaptive_icon_foreground: "assets/images/logo.png"
+
 
 # The following section is specific to Flutter packages.
 flutter:
@@ -58,4 +67,5 @@ flutter:
       - assets/audio/move3.mp3
       - assets/audio/move4.mp3
       - assets/audio/alarm.mp3
+      - assets/images/logo.png
     

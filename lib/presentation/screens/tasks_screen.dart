@@ -25,15 +25,16 @@ class TaskScreen extends StatelessWidget {
         return Scaffold(
           appBar: AppBar(
             title: const Text('Aufgabenliste'),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: () {
-                  context.read<TasksCubit>().loadTasks();
-                },
-                tooltip: 'Aufgaben aktualisieren',
-              ),
-            ],
+            // **Entfernung des Buttons aus dem AppBar**
+            // actions: [
+            //   IconButton(
+            //     icon: const Icon(Icons.refresh),
+            //     onPressed: () {
+            //       context.read<TasksCubit>().loadTasks();
+            //     },
+            //     tooltip: 'Aufgaben aktualisieren',
+            //   ),
+            // ],
           ),
           body: (state is TasksLoading)
               ? const Center(child: CircularProgressIndicator())

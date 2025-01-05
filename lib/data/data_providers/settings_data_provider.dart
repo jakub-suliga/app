@@ -19,7 +19,7 @@ class SettingsDataProvider {
       'longBreakDuration': prefs.getInt(_longBreakDurationKey) ?? 15 * 60,
       'sessionsBeforeLongBreak': prefs.getInt(_sessionsBeforeLongBreakKey) ?? 4,
       'autoStartNextPomodoro': prefs.getBool(_autoStartNextPomodoroKey) ?? true,
-      'eSenseDeviceName': prefs.getString(_eSenseDeviceNameKey) ?? 'eSense_Device',
+      'eSenseDeviceName': prefs.getString(_eSenseDeviceNameKey) ?? 'eSense-',
     };
   }
 

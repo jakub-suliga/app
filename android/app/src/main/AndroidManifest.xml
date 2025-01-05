@@ -11,7 +11,7 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <application
-        android:label="app"
+        android:label="FocusBuddy"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
