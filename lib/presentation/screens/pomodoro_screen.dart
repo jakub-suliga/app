@@ -160,7 +160,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
         timer.startBreak(isLong: false);
       }
 
-      // **Neue Logik zur Aktualisierung der Aufgabenzeit**
+      // Aktualisierung der Aufgabenzeit
       if (_nextTask != null) {
         final tasksCubit = context.read<TasksCubit>();
         final selectedTask = _nextTask!;
@@ -282,7 +282,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           subtitle: const Text(
-            'Keine bevorstehende Aufgabe.',
+            'Keine Aufgaben. Füge eine Aufgabe hinzu!',
             style: TextStyle(fontSize: 16),
           ),
         ),
@@ -313,7 +313,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     }
   }
 
-  /// **Neue Methode zur Anzeige des Fokus-Status**
+  /// Methode zur Anzeige des Fokus-Status
   Widget _focusStatusDisplay() {
     String focusStatus = '';
 
@@ -332,7 +332,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
         focusStatus = 'Mehr bewegen!'; // Bei wenig Bewegung während Pause
       }
     } else {
-      focusStatus = 'Pomodoro starten.'; // Änderung von "Nicht gestartet" zu "Pomodoro starten."
+      focusStatus = 'Starte eine Pomodoro Einheit!'; // Änderung von "Nicht gestartet" zu "Pomodoro starten."
     }
 
     Color statusColor = Colors.blue.shade50; // Gleiche Farbe wie die aktuelle Aufgabenbox
@@ -349,10 +349,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
         statusIcon = Icons.warning;
         iconColor = Colors.red;
         break;
-      case 'Pause':
-        statusIcon = Icons.pause_circle_filled;
-        iconColor = Colors.orange;
-        break;
       case 'Gute Bewegung!':
         statusIcon = Icons.directions_walk;
         iconColor = Colors.green;
@@ -361,7 +357,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
         statusIcon = Icons.directions_run;
         iconColor = Colors.orange;
         break;
-      case 'Pomodoro starten.':
+      case 'Starte eine Pomodoro Einheit!':
         statusIcon = Icons.play_circle_fill;
         iconColor = Colors.blue;
         break;
@@ -400,15 +396,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Pomodoro Timer'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.list),
-            onPressed: () {
-              Navigator.pushNamed(context, '/tasks');
-            },
-            tooltip: 'Aufgabenliste',
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(5.0, 30.0, 5.0, 15.0),
@@ -645,7 +632,7 @@ class RadialPainter extends CustomPainter {
   }
 }
 
-/// **Aktualisierte PomoTimer-Klasse mit dynamischen Einstellungen**
+/// Aktualisierte PomoTimer-Klasse mit dynamischen Einstellungen
 class PomoTimer {
   final Function onTimerUpdate;
   final Function(bool isSession) onSessionComplete;
@@ -775,7 +762,7 @@ class PomoTimer {
     if (isRunning) {
       startTime = _currentTime;
     } else {
-      // **Neue Änderung: Aktualisiere _currentTime und startTime, wenn der Timer nicht läuft**
+      // Aktualisiere _currentTime und startTime, wenn der Timer nicht läuft
       _currentTime = pomodoroDuration ?? _currentTime;
       startTime = _currentTime;
     }

@@ -5,7 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../logic/tasks/tasks_cubit.dart';
 import '../../../data/models/task_model.dart';
 import 'package:intl/intl.dart';
-import '../../core/constants.dart'; // Importieren Sie die festen Prioritäten
+import '../../core/constants.dart'; // Importiere die festen Prioritäten
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
@@ -15,9 +15,6 @@ class TasksScreen extends StatefulWidget {
 }
 
 class _TasksScreenState extends State<TasksScreen> {
-  String searchQuery = '';
-  String selectedPrio = 'Alle';
-
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<TasksCubit, TasksState>(
@@ -25,26 +22,16 @@ class _TasksScreenState extends State<TasksScreen> {
         List<TaskModel> tasks = [];
         if (state is TasksLoaded) {
           tasks = state.tasks;
-          tasks = _applyFilters(tasks);
         }
 
         return Scaffold(
           appBar: AppBar(
             title: const Text('Aufgabenliste'),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.search),
-                onPressed: _openSearch,
-              ),
-              IconButton(
-                icon: const Icon(Icons.filter_list),
-                onPressed: _openFilterDialog,
-              ),
-            ],
+            // Entfernt die actions: Such- und Filter-Buttons
           ),
           body: (state is TasksLoading)
               ? const Center(child: CircularProgressIndicator())
-              : TaskList(), // Verwenden Sie das separate TaskList-Widget
+              : TaskList(tasks: tasks), // Übergebe die Aufgaben direkt an TaskList
           floatingActionButton: FloatingActionButton(
             onPressed: _createTask,
             child: const Icon(Icons.add),
@@ -54,82 +41,8 @@ class _TasksScreenState extends State<TasksScreen> {
     );
   }
 
-  List<TaskModel> _applyFilters(List<TaskModel> tasks) {
-    // Suche nach Titel
-    if (searchQuery.isNotEmpty) {
-      tasks = tasks.where((t) => t.title.toLowerCase().contains(searchQuery.toLowerCase())).toList();
-    }
-    // Filter nach Priorität
-    if (selectedPrio != 'Alle') {
-      tasks = tasks.where((t) => t.priority == selectedPrio).toList();
-    }
-    return tasks;
-  }
-
-  void _openSearch() async {
-    // Einfaches Dialog
-    final result = await showDialog<String>(
-      context: context,
-      builder: (ctx) {
-        String tmp = searchQuery;
-        return AlertDialog(
-          title: const Text('Aufgaben durchsuchen'),
-          content: TextField(
-            decoration: const InputDecoration(hintText: 'Suchbegriff'),
-            onChanged: (val) => tmp = val,
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Abbrechen')),
-            TextButton(onPressed: () => Navigator.pop(ctx, tmp), child: const Text('Ok')),
-          ],
-        );
-      },
-    );
-    if (result != null) {
-      setState(() {
-        searchQuery = result;
-      });
-    }
-  }
-
-  void _openFilterDialog() async {
-    // Filter nach Priorität
-    await showDialog(
-      context: context,
-      builder: (ctx) {
-        String selected = selectedPrio; // Kopie
-        return AlertDialog(
-          title: const Text('Filter'),
-          content: DropdownButton<String>(
-            value: selected,
-            items: [
-              const DropdownMenuItem(value: 'Alle', child: Text('Alle')),
-              ...AppConstants.fixedPriorities.map((prio) => DropdownMenuItem(
-                    value: prio,
-                    child: Text(prio),
-                  )),
-            ],
-            onChanged: (val) {
-              selected = val ?? 'Alle';
-            },
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Abbrechen')),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, selected),
-              child: const Text('Ok'),
-            ),
-          ],
-        );
-      },
-    ).then((value) {
-      if (value != null) {
-        setState(() => selectedPrio = value);
-      }
-    });
-  }
   void _createTask() {
-    // Öffnen Sie den TaskDialog ohne eine bestehende Aufgabe
+    // Öffne den TaskDialog ohne eine bestehende Aufgabe
     showDialog(
       context: context,
       builder: (context) => const TaskDialog(),
@@ -160,7 +73,7 @@ class _TaskDialogState extends State<TaskDialog> {
   @override
   void initState() {
     super.initState();
-    // Initialisieren Sie die Felder entweder mit den bestehenden Werten oder mit Standardwerten
+    // Initialisiere die Felder entweder mit den bestehenden Werten oder mit Standardwerten
     if (widget.task != null) {
       _title = widget.task!.title;
       _description = widget.task!.description;
@@ -256,6 +169,19 @@ class _TaskDialogState extends State<TaskDialog> {
               ),
               const SizedBox(height: 10),
 
+              // Hinzufügen des Labels "Aufgabenlänge:" in normaler Schrift
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Aufgabenlänge:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.normal, // Normaler Schriftstil
+                  ),
+                ),
+              ),
+              const SizedBox(height: 5),
+
               // Dauer
               Row(
                 children: [
@@ -318,6 +244,7 @@ class _TaskDialogState extends State<TaskDialog> {
       initialDate: _endDate ?? now,
       firstDate: now,
       lastDate: DateTime(now.year + 5),
+      // Da die App bereits auf Deutsch lokalisiert ist, ist keine weitere Anpassung erforderlich
     );
 
     if (picked != null) {
@@ -368,7 +295,9 @@ class _TaskDialogState extends State<TaskDialog> {
 
 /// TaskList Widget
 class TaskList extends StatelessWidget {
-  const TaskList({super.key});
+  final List<TaskModel> tasks;
+
+  const TaskList({super.key, required this.tasks});
 
   String _formatDuration(Duration duration) {
     final hours = duration.inHours;
@@ -378,90 +307,110 @@ class TaskList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<TasksCubit, TasksState>(
-      builder: (context, state) {
-        if (state is TasksLoaded) {
-          final tasks = state.tasks;
-          if (tasks.isEmpty) {
-            return const Center(child: Text('Keine Aufgaben vorhanden.'));
-          }
+    if (tasks.isEmpty) {
+      return const Center(child: Text('Keine Aufgaben vorhanden.'));
+    }
 
-          return ListView.builder(
-            itemCount: tasks.length,
-            itemBuilder: (context, index) {
-              final task = tasks[index];
-              return Card(
-                child: ListTile(
-                  leading: Checkbox(
-                    value: false, // Da wir `isDone` entfernt haben
-                    onChanged: (val) {
-                      // Aufgabe entfernen statt aktualisieren
-                      context.read<TasksCubit>().removeTask(task.id);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Aufgabe "${task.title}" entfernt.')),
-                      );
-                    },
-                  ),
-                  title: GestureDetector(
-                    onTap: () => _editTask(context, task),
+    return ListView.builder(
+      itemCount: tasks.length,
+      itemBuilder: (context, index) {
+        final task = tasks[index];
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+          child: ListTile(
+            // Optimierter leading Bereich mit Label "Abhacken:" und Checkbox
+            leading: SizedBox(
+              width: 120, // Angepasste Breite für Label und Checkbox
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Label "Abhacken:"
+                  Expanded(
                     child: Text(
-                      task.title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      'Erledigt?:',
+                      style: const TextStyle(fontSize: 12),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(task.description),
-                      if (task.endDate != null)
-                        Text('Fällig bis: ${DateFormat.yMd().format(task.endDate!)}'),
-                      Text('Priorität: ${task.priority}'),
-                      Text('Verbleibende Dauer: ${_formatDuration(task.duration)}'),
-                    ],
+                  // Verkleinerte Checkbox
+                  Transform.scale(
+                    scale: 0.8, // Verkleinert die Checkbox auf 80%
+                    child: Checkbox(
+                      value: false, // Optional: Verbinde mit einer Eigenschaft wie `isDone`
+                      onChanged: (val) {
+                        // Beispiel: Aufgabe als erledigt markieren oder entfernen
+                        // Hier wird die Aufgabe entfernt, wie im ursprünglichen Code
+                        context.read<TasksCubit>().removeTask(task.id);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Aufgabe "${task.title}" entfernt.')),
+                        );
+                      },
+                    ),
                   ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Bearbeiten-Icon (Stift)
-                      IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.blue),
-                        onPressed: () => _editTask(context, task),
-                        tooltip: 'Aufgabe bearbeiten',
-                      ),
-                      // Löschen-Icon (Müll)
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () {
-                          // Bestätigungsdialog vor dem Löschen
-                          _confirmDelete(context, task);
-                        },
-                        tooltip: 'Aufgabe löschen',
-                      ),
-                    ],
-                  ),
+                ],
+              ),
+            ),
+            title: GestureDetector(
+              onTap: () => _editTask(context, task),
+              child: Text(
+                task.title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
                 ),
-              );
-            },
-          );
-        }
-
-        if (state is TasksLoading) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (state is TasksError) {
-          return Center(child: Text(state.message));
-        }
-
-        return const SizedBox.shrink();
+                overflow: TextOverflow.ellipsis, // Verhindert Überlauf
+              ),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  task.description,
+                  overflow: TextOverflow.ellipsis, // Verhindert Überlauf
+                ),
+                if (task.endDate != null)
+                  Text(
+                    'Fällig bis: ${DateFormat.yMd().format(task.endDate!)}',
+                    overflow: TextOverflow.ellipsis, // Verhindert Überlauf
+                  ),
+                Text(
+                  'Priorität: ${task.priority}',
+                  overflow: TextOverflow.ellipsis, // Verhindert Überlauf
+                ),
+                Text(
+                  'Verbleibende Dauer: ${_formatDuration(task.duration)}',
+                  overflow: TextOverflow.ellipsis, // Verhindert Überlauf
+                ),
+              ],
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Bearbeiten-Icon (Stift)
+                IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.blue, size: 20),
+                  onPressed: () => _editTask(context, task),
+                  tooltip: 'Aufgabe bearbeiten',
+                ),
+                // Löschen-Icon (Müll)
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                  onPressed: () {
+                    // Bestätigungsdialog vor dem Löschen
+                    _confirmDelete(context, task);
+                  },
+                  tooltip: 'Aufgabe löschen',
+                ),
+              ],
+            ),
+            onTap: () => _editTask(context, task),
+          ),
+        );
       },
     );
   }
 
   void _editTask(BuildContext context, TaskModel task) {
-    // Öffnen Sie den TaskDialog mit der bestehenden Aufgabe
+    // Öffne den TaskDialog mit der bestehenden Aufgabe
     showDialog(
       context: context,
       builder: (context) => TaskDialog(task: task),
