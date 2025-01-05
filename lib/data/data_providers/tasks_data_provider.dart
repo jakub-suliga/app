@@ -1,12 +1,12 @@
-// lib/data/data_providers/tasks_data_provider.dart
-
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/task_model.dart';
 
+/// Speichert und verwaltet Aufgaben mithilfe von SharedPreferences.
 class TasksDataProvider {
   final String _tasksKey = 'tasks';
 
+  /// Lädt alle Aufgaben aus SharedPreferences.
   Future<List<TaskModel>> fetchTasks() async {
     final prefs = await SharedPreferences.getInstance();
     final tasksString = prefs.getString(_tasksKey);
@@ -18,12 +18,14 @@ class TasksDataProvider {
     }
   }
 
+  /// Fügt eine neue Aufgabe hinzu.
   Future<void> addTask(TaskModel task) async {
     final tasks = await fetchTasks();
     tasks.add(task);
     await _saveTasks(tasks);
   }
 
+  /// Aktualisiert eine bestehende Aufgabe anhand ihrer ID.
   Future<void> updateTask(TaskModel updatedTask) async {
     final tasks = await fetchTasks();
     final index = tasks.indexWhere((task) => task.id == updatedTask.id);
@@ -33,13 +35,14 @@ class TasksDataProvider {
     }
   }
 
+  /// Entfernt eine Aufgabe vollständig anhand ihrer ID.
   Future<void> removeTask(String taskId) async {
     final tasks = await fetchTasks();
     tasks.removeWhere((task) => task.id == taskId);
     await _saveTasks(tasks);
   }
 
-  /// Methode zum Markieren einer Aufgabe als abgeschlossen
+  /// Markiert eine Aufgabe als abgeschlossen.
   Future<void> markTaskAsCompleted(String taskId) async {
     final tasks = await fetchTasks();
     final taskIndex = tasks.indexWhere((task) => task.id == taskId);
@@ -53,7 +56,7 @@ class TasksDataProvider {
     }
   }
 
-  /// Methode zum Wiederherstellen einer abgeschlossenen Aufgabe
+  /// Macht eine zuvor abgeschlossene Aufgabe wieder aktiv.
   Future<void> restoreTask(String taskId) async {
     final tasks = await fetchTasks();
     final taskIndex = tasks.indexWhere((task) => task.id == taskId);
@@ -67,6 +70,7 @@ class TasksDataProvider {
     }
   }
 
+  /// Speichert alle Aufgaben in SharedPreferences.
   Future<void> _saveTasks(List<TaskModel> tasks) async {
     final prefs = await SharedPreferences.getInstance();
     final List<Map<String, dynamic>> jsonData =

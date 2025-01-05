@@ -1,9 +1,9 @@
-// lib/logic/settings/settings_state.dart
-
 part of 'settings_cubit.dart';
 
+/// Definiert mögliche Zustände für Einstellungen wie Pomodoro-Dauer und eSense-Verbindung.
 enum SettingsStatus { initial, loading, loaded, error }
 
+/// Enthält alle relevanten Einstellungen und den aktuellen Verbindungsstatus zum eSense-Gerät.
 class SettingsState extends Equatable {
   final String eSenseDeviceName;
   final Duration pomodoroDuration;
@@ -27,9 +27,10 @@ class SettingsState extends Equatable {
     this.errorMessage,
   });
 
+  /// Standardwerte für den allerersten Zustand.
   factory SettingsState.initial() {
     return const SettingsState(
-      eSenseDeviceName: 'eSense_Device',
+      eSenseDeviceName: 'eSense-',
       pomodoroDuration: Duration(minutes: 25),
       shortBreakDuration: Duration(minutes: 5),
       longBreakDuration: Duration(minutes: 15),
@@ -41,6 +42,7 @@ class SettingsState extends Equatable {
     );
   }
 
+  /// Erstellt einen neuen Zustand auf Basis des aktuellen, überschreibt dabei nur die angegebenen Felder.
   SettingsState copyWith({
     String? eSenseDeviceName,
     Duration? pomodoroDuration,

@@ -7,6 +7,7 @@ import '../../data/repositories/tasks_repository.dart';
 
 part 'tasks_state.dart';
 
+/// Steuert das Laden, Hinzufügen, Aktualisieren und Löschen von Aufgaben.
 class TasksCubit extends Cubit<TasksState> {
   final TasksRepository tasksRepository;
 
@@ -14,7 +15,7 @@ class TasksCubit extends Cubit<TasksState> {
     loadTasks();
   }
 
-  /// Lädt alle Aufgaben und trennt sie in aktive und erledigte Aufgaben
+  /// Lädt alle vorhandenen Aufgaben aus dem Repository.
   Future<void> loadTasks() async {
     emit(TasksLoading());
     try {
@@ -27,7 +28,7 @@ class TasksCubit extends Cubit<TasksState> {
     }
   }
 
-  /// Fügt eine neue Aufgabe hinzu
+  /// Fügt eine neue Aufgabe hinzu.
   Future<void> addTask(TaskModel task) async {
     try {
       await tasksRepository.addTask(task);
@@ -37,7 +38,7 @@ class TasksCubit extends Cubit<TasksState> {
     }
   }
 
-  /// Aktualisiert eine bestehende Aufgabe
+  /// Aktualisiert eine vorhandene Aufgabe.
   Future<void> updateTask(TaskModel updatedTask) async {
     try {
       await tasksRepository.updateTask(updatedTask);
@@ -47,7 +48,7 @@ class TasksCubit extends Cubit<TasksState> {
     }
   }
 
-  /// Markiert eine Aufgabe als abgeschlossen
+  /// Markiert eine Aufgabe als erledigt.
   Future<void> markTaskAsCompleted(String taskId) async {
     try {
       await tasksRepository.markTaskAsCompleted(taskId);
@@ -57,7 +58,7 @@ class TasksCubit extends Cubit<TasksState> {
     }
   }
 
-  /// Stellt eine erledigte Aufgabe wieder her
+  /// Stellt eine erledigte Aufgabe wieder her.
   Future<void> restoreTask(String taskId) async {
     try {
       await tasksRepository.restoreTask(taskId);
@@ -67,7 +68,7 @@ class TasksCubit extends Cubit<TasksState> {
     }
   }
 
-  /// Entfernt eine Aufgabe vollständig
+  /// Entfernt eine Aufgabe endgültig.
   Future<void> removeTask(String taskId) async {
     try {
       await tasksRepository.removeTask(taskId);
@@ -77,12 +78,11 @@ class TasksCubit extends Cubit<TasksState> {
     }
   }
 
-  /// Gibt die nächste aktive Aufgabe zurück (z.B. nach Priorität sortiert)
+  /// Gibt die nächste Aufgabe basierend auf Priorität und Fälligkeitsdatum zurück.
   TaskModel? getNextTask() {
     if (state is TasksLoaded) {
       final activeTasks = (state as TasksLoaded).activeTasks;
       if (activeTasks.isNotEmpty) {
-        // Beispiel: Sortiere nach Priorität und Fälligkeitsdatum
         activeTasks.sort((a, b) {
           int priorityComparison = _priorityValue(a.priority).compareTo(_priorityValue(b.priority));
           if (priorityComparison != 0) return priorityComparison;
@@ -101,7 +101,7 @@ class TasksCubit extends Cubit<TasksState> {
     return null;
   }
 
-  /// Hilfsmethode zur Prioritätsbewertung
+  /// Übersetzt eine Prioritätsangabe in eine Ordnungszahl.
   int _priorityValue(String priority) {
     switch (priority.toLowerCase()) {
       case 'hoch':

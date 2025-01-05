@@ -1,16 +1,13 @@
-// lib/main.dart
-
 import 'package:FocusBuddy/presentation/screens/tasks_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
-// Importiere die Cubits
 import 'logic/settings/settings_cubit.dart';
 import 'logic/tasks/tasks_cubit.dart';
 import 'logic/history/history_cubit.dart';
 
-// Importiere die Repositories und DataProviders
 import 'data/data_providers/settings_data_provider.dart';
 import 'data/repositories/settings_repository.dart';
 import 'data/data_providers/tasks_data_provider.dart';
@@ -18,56 +15,34 @@ import 'data/repositories/tasks_repository.dart';
 import 'data/data_providers/history_data_provider.dart';
 import 'data/repositories/history_repository.dart';
 
-// Importiere die Screens
 import 'presentation/screens/intro_screen.dart';
 import 'presentation/screens/history_screen.dart';
 import 'presentation/screens/bottom_nav_screen.dart';
 import 'presentation/screens/pomodoro_screen.dart';
 
-// Importiere den navigatorKey
-import 'core/app.dart'; // Stelle sicher, dass dieser Pfad korrekt ist
-
-// Importiere die eSenseService
+import 'core/app.dart';
 import 'service/eSenseService.dart';
 
+/// Main-Einstiegspunkt der App. 
+/// Richtet Repositories und Bloc-Provider ein und zeigt entweder den Intro-Screen oder die Hauptnavigation an.
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialisiere Repositories
-  final settingsRepository = SettingsRepository(
-    dataProvider: SettingsDataProvider(),
-  );
-
-  final tasksRepository = TasksRepository(
-    dataProvider: TasksDataProvider(),
-  );
-
-  final historyRepository = HistoryRepository(
-    dataProvider: HistoryDataProvider(),
-  );
-
-  // Initialisiere eSenseService
+  final settingsRepository = SettingsRepository(dataProvider: SettingsDataProvider());
+  final tasksRepository = TasksRepository(dataProvider: TasksDataProvider());
+  final historyRepository = HistoryRepository(dataProvider: HistoryDataProvider());
   final eSenseService = ESenseService();
 
-  // Lade den introShown-Status
   final prefs = await SharedPreferences.getInstance();
   final introShown = prefs.getBool('introShown') ?? false;
 
   runApp(
     MultiRepositoryProvider(
       providers: [
-        RepositoryProvider<SettingsRepository>(
-          create: (_) => settingsRepository,
-        ),
-        RepositoryProvider<TasksRepository>(
-          create: (_) => tasksRepository,
-        ),
-        RepositoryProvider<HistoryRepository>(
-          create: (_) => historyRepository,
-        ),
-        RepositoryProvider<ESenseService>(
-          create: (_) => eSenseService,
-        ),
+        RepositoryProvider<SettingsRepository>(create: (_) => settingsRepository),
+        RepositoryProvider<TasksRepository>(create: (_) => tasksRepository),
+        RepositoryProvider<HistoryRepository>(create: (_) => historyRepository),
+        RepositoryProvider<ESenseService>(create: (_) => eSenseService),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -87,7 +62,6 @@ void main() async {
               historyRepository: context.read<HistoryRepository>(),
             ),
           ),
-          // Füge weitere Cubits hier hinzu, falls nötig
         ],
         child: MyApp(showIntroScreen: !introShown),
       ),
@@ -95,6 +69,8 @@ void main() async {
   );
 }
 
+/// Haupt-Widget der App. 
+/// Legt Thema, Lokalisierung und Routing fest.
 class MyApp extends StatelessWidget {
   final bool showIntroScreen;
 
@@ -105,9 +81,15 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       navigatorKey: navigatorKey,
       title: 'Focus App',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('de', 'DE'),
+      ],
+      theme: ThemeData(primarySwatch: Colors.blue),
       home: showIntroScreen ? const IntroScreen() : const BottomNavScreen(),
       routes: {
         '/tasks': (context) => const TaskScreen(),
@@ -115,9 +97,7 @@ class MyApp extends StatelessWidget {
         '/history': (context) => const HistoryScreen(),
         '/intro': (context) => const IntroScreen(),
         '/bottomNav': (context) => const BottomNavScreen(),
-        // Füge weitere Routen hinzu, falls nötig
       },
-      // Optional: onGenerateRoute nutzen, falls nötig
     );
   }
 }

@@ -1,15 +1,12 @@
-// lib/services/e_sense_service.dart
-
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 import 'package:esense_flutter/esense.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:flutter/material.dart';
-import '../core/app.dart'; // Importiere den navigatorKey
 
+/// Service zur Verwaltung der Verbindung und Sensor-Daten eines eSense-Geräts.
+/// Verwendet ein Singleton-Muster, damit nur eine Instanz existiert.
 class ESenseService {
-  // Singleton-Instanz
   static final ESenseService _instance = ESenseService._internal();
   factory ESenseService() => _instance;
   ESenseService._internal();
@@ -30,7 +27,6 @@ class ESenseService {
 
   final List<_AccelSample> _accelSamples = [];
 
-  // Streams zur Kommunikation mit der UI
   final StreamController<String> _deviceStatusController = StreamController.broadcast();
   final StreamController<String> _movementStatusController = StreamController.broadcast();
   final StreamController<String> _buttonStatusController = StreamController.broadcast();
@@ -45,47 +41,37 @@ class ESenseService {
   StreamSubscription? _eSenseEventsSub;
   StreamSubscription? _sensorSub;
 
+  /// Initialisiert den Manager mit dem gegebenen Namen und fragt Berechtigungen an.
   Future<void> initialize(String deviceName) async {
     _eSenseManager = ESenseManager(deviceName);
     await _askForPermissions();
     await _listenToESense();
   }
 
+  /// Fragt Bluetooth- und ggf. Standortberechtigungen an.
   Future<void> _askForPermissions() async {
     if (!(await Permission.bluetoothScan.request().isGranted &&
         await Permission.bluetoothConnect.request().isGranted)) {
-      debugPrint('WARNUNG: Bluetooth-Berechtigungen fehlen. eSense kann nicht verbunden werden.');
       _deviceStatusController.add('Bluetooth-Berechtigungen fehlen');
-      ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
-        const SnackBar(content: Text('Bluetooth-Berechtigungen fehlen.')),
-      );
     }
     if (Platform.isAndroid) {
       if (!(await Permission.locationWhenInUse.request().isGranted)) {
-        debugPrint('WARNUNG: Standortberechtigung fehlt. eSense kann nicht verbunden werden.');
         _deviceStatusController.add('Standortberechtigung fehlt');
-        ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
-          const SnackBar(content: Text('Standortberechtigung fehlt.')),
-        );
       }
     }
   }
 
+  /// Lauscht auf Verbindungsevents und versucht, eine Verbindung herzustellen.
   Future<void> _listenToESense() async {
     if (_eSenseManager == null) return;
 
     _connectionSub = _eSenseManager!.connectionEvents.listen((event) {
-      debugPrint('CONNECTION event: $event');
-
       switch (event.type) {
         case ConnectionType.connected:
           deviceStatus = 'Connected';
-          sampling = false; // Sensoren werden nicht automatisch gestartet
+          sampling = false;
           _deviceStatusController.add(deviceStatus);
           _subscribeToESenseEvents();
-          ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
-            const SnackBar(content: Text('Erfolgreich mit dem Gerät verbunden.')),
-          );
           break;
         case ConnectionType.unknown:
           deviceStatus = 'Unknown';
@@ -100,9 +86,6 @@ class ESenseService {
           _deviceStatusController.add(deviceStatus);
           _movementStatusController.add(movementStatus);
           _buttonStatusController.add(button);
-          ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
-            const SnackBar(content: Text('Verbindung zum Gerät getrennt.')),
-          );
           break;
         case ConnectionType.device_found:
           deviceStatus = 'Device found';
@@ -118,36 +101,28 @@ class ESenseService {
     await _connectToESense();
   }
 
+  /// Stellt eine Verbindung zum eSense-Gerät her, wenn nicht bereits verbunden.
   Future<void> _connectToESense() async {
     if (_eSenseManager == null || deviceStatus == 'Connected') return;
 
-    debugPrint('Versuche, zu eSense zu verbinden...');
     try {
       final didConnect = await _eSenseManager!.connect();
       if (!didConnect) {
         deviceStatus = 'Connection failed';
         _deviceStatusController.add(deviceStatus);
-        ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
-          const SnackBar(content: Text('Verbindung zum Gerät fehlgeschlagen.')),
-        );
       }
     } catch (e) {
-      debugPrint('Fehler beim Verbinden: $e');
       deviceStatus = 'Connection failed';
       _deviceStatusController.add(deviceStatus);
-      ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
-        const SnackBar(content: Text('Verbindung zum Gerät fehlgeschlagen.')),
-      );
     }
   }
 
+  /// Abonniert eSense-spezifische Events wie Batterie oder Button.
   void _subscribeToESenseEvents() {
     if (_eSenseManager == null || deviceStatus != 'Connected') return;
 
     try {
       _eSenseEventsSub = _eSenseManager!.eSenseEvents.listen((event) {
-        debugPrint('ESENSE event: $event');
-
         switch (event.runtimeType) {
           case DeviceNameRead:
             deviceName = (event as DeviceNameRead).deviceName ?? 'Unknown';
@@ -165,14 +140,11 @@ class ESenseService {
             break;
         }
       });
-    } catch (e) {
-      debugPrint('Fehler beim Abonnieren der eSenseEvents: $e');
-      _deviceStatusController.add('Fehler beim Empfangen von eSense-Daten');
-    }
-
+    } catch (e) {}
     _getESenseProperties();
   }
 
+  /// Fragt periodisch Batterie und Gerätename ab.
   void _getESenseProperties() {
     Timer.periodic(
       const Duration(seconds: 10),
@@ -182,17 +154,12 @@ class ESenseService {
     Timer(const Duration(seconds: 2), () => _eSenseManager!.getDeviceName());
   }
 
-  // Methoden zum Starten und Stoppen der Sensor-Events
+  /// Startet die Sensor-Events (IMU) und empfängt Beschleunigungsdaten.
   void startSensors() {
     if (_eSenseManager == null || deviceStatus != 'Connected') {
-      debugPrint('Cannot start sensors: eSense is not connected.');
-      ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
-        const SnackBar(content: Text('eSense-Gerät ist nicht verbunden.')),
-      );
       return;
     }
-
-    if (sampling) return; // Bereits gestartet
+    if (sampling) return;
 
     try {
       _sensorSub = _eSenseManager!.sensorEvents.listen((event) {
@@ -201,56 +168,34 @@ class ESenseService {
           final ay = event.accel![1];
           final az = event.accel![2];
           final mag = sqrt(ax * ax + ay * ay + az * az).toDouble();
-
           final now = DateTime.now();
           _accelSamples.add(_AccelSample(mag, now));
-
           if (_accelSamples.length > _windowSize) {
             _accelSamples.removeAt(0);
           }
-
-          rawImuDataString =
-              'Accel: [${ax.toStringAsFixed(2)}, ${ay.toStringAsFixed(2)}, ${az.toStringAsFixed(2)}]';
+          rawImuDataString = 'Accel: [${ax.toStringAsFixed(2)}, '
+              '${ay.toStringAsFixed(2)}, ${az.toStringAsFixed(2)}]';
           currentMagnitude = mag;
-
           _dataController.add({
             'rawImuData': rawImuDataString,
             'currentMagnitude': currentMagnitude,
           });
-
-          debugPrint('IMU-Daten empfangen: ax=$ax, ay=$ay, az=$az, mag=$mag');
-
           if (_accelSamples.length == _windowSize) {
             final magnitudes = _accelSamples.map((s) => s.magnitude).toList();
             final stdDev = _calculateStandardDeviation(magnitudes);
-
-            debugPrint('Standardabweichung: $stdDev');
-
             if (stdDev > _movementThreshold && stdDev < _maxStdDev) {
-              debugPrint('Bewegung erkannt.');
               _updateMovementStatus('Bewegung');
             } else if (stdDev <= _movementThreshold) {
-              debugPrint('Keine Bewegung erkannt.');
               _updateMovementStatus('Ruhig');
             }
           }
         }
       });
-
       sampling = true;
-      _deviceStatusController.add('Sensor-Events abonniert');
-      ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
-        const SnackBar(content: Text('Sensor-Events abonniert.')),
-      );
-    } catch (e) {
-      debugPrint('Fehler beim Abonnieren der Sensor-Events: $e');
-      _deviceStatusController.add('Fehler beim Abonnieren der Sensor-Events');
-      ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
-        const SnackBar(content: Text('Fehler beim Abonnieren der Sensor-Events.')),
-      );
-    }
+    } catch (e) {}
   }
 
+  /// Stoppt die Sensor-Events und setzt alle Sensor-bezogenen Variablen zurück.
   void stopSensors() {
     _sensorSub?.cancel();
     _sensorSub = null;
@@ -259,14 +204,11 @@ class ESenseService {
     movementStatus = 'Ruhig';
     currentMagnitude = 0.0;
     rawImuDataString = 'No data';
-    _deviceStatusController.add('Sensor-Events abbestellt');
     _movementStatusController.add(movementStatus);
     _buttonStatusController.add(button);
-    ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
-      const SnackBar(content: Text('Sensor-Events abbestellt.')),
-    );
   }
 
+  /// Aktualisiert den Bewegungsstatus und benachrichtigt die UI.
   void _updateMovementStatus(String status) {
     if (movementStatus != status) {
       movementStatus = status;
@@ -274,16 +216,17 @@ class ESenseService {
     }
   }
 
+  /// Berechnet die Standardabweichung einer Liste von Werten.
   double _calculateStandardDeviation(List<double> data) {
     if (data.isEmpty) return 0.0;
     double mean = data.reduce((a, b) => a + b) / data.length;
-    num sumOfSquaredDiffs =
-        data.map((x) => pow(x - mean, 2)).reduce((a, b) => a + b);
+    num sumOfSquaredDiffs = data.map((x) => pow(x - mean, 2)).reduce((a, b) => a + b);
     return sqrt(sumOfSquaredDiffs / data.length);
   }
 
+  /// Trennt die Verbindung und setzt Statusvariablen zurück.
   Future<void> disconnect() async {
-    stopSensors(); // Stelle sicher, dass Sensoren gestoppt werden
+    stopSensors();
     await _eSenseManager?.disconnect();
     deviceStatus = 'Disconnected';
     sampling = false;
@@ -293,12 +236,9 @@ class ESenseService {
     _deviceStatusController.add(deviceStatus);
     _movementStatusController.add(movementStatus);
     _buttonStatusController.add(button);
-    ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
-      const SnackBar(content: Text('Erfolgreich getrennt.')),
-    );
   }
 
-  /// **Wichtig: Definiere die dispose-Methode korrekt**
+  /// Schließt alle Streams und beendet die Sensor-Events.
   void dispose() {
     _sensorSub?.cancel();
     _eSenseEventsSub?.cancel();
@@ -310,7 +250,7 @@ class ESenseService {
   }
 }
 
-/// Hilfsklasse zum Speichern der Magnitude und des Zeitstempels
+/// Repräsentiert eine einzelne Messung mit Magnitude und Zeitstempel.
 class _AccelSample {
   final double magnitude;
   final DateTime time;

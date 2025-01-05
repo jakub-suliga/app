@@ -8,6 +8,7 @@ import 'dart:async'; // Für StreamSubscription
 
 part 'settings_state.dart';
 
+/// Verwaltet und speichert die Einstellungen wie Pomodoro-Dauer und eSense-Verbindungsstatus.
 class SettingsCubit extends Cubit<SettingsState> {
   final SettingsRepository settingsRepository;
   final ESenseService _eSenseService;
@@ -19,7 +20,6 @@ class SettingsCubit extends Cubit<SettingsState> {
   })  : _eSenseService = eSenseService,
         super(SettingsState.initial()) {
     _loadSettings();
-    // Listen to the deviceStatusStream to update isESenseConnected
     _deviceStatusSubscription = _eSenseService.deviceStatusStream.listen((status) {
       bool isConnected = status == 'Connected';
       emit(state.copyWith(isESenseConnected: isConnected));
@@ -29,10 +29,11 @@ class SettingsCubit extends Cubit<SettingsState> {
   @override
   Future<void> close() {
     _deviceStatusSubscription.cancel();
-    _eSenseService.dispose(); // Stelle sicher, dass die Service-Instanz korrekt freigegeben wird
+    _eSenseService.dispose();
     return super.close();
   }
 
+  /// Lädt die gespeicherten Einstellungen aus dem Repository.
   Future<void> _loadSettings() async {
     emit(state.copyWith(status: SettingsStatus.loading));
     try {
@@ -51,8 +52,7 @@ class SettingsCubit extends Cubit<SettingsState> {
     }
   }
 
-  // Methoden zur Aktualisierung der Einstellungen
-
+  /// Speichert die neue Pomodoro-Dauer.
   Future<void> setPomodoroDuration(Duration newDuration) async {
     try {
       await settingsRepository.updatePomodoroDuration(newDuration);
@@ -62,6 +62,7 @@ class SettingsCubit extends Cubit<SettingsState> {
     }
   }
 
+  /// Speichert die neue Dauer für kurze Pausen.
   Future<void> setShortBreakDuration(Duration newDuration) async {
     try {
       await settingsRepository.updateShortBreakDuration(newDuration);
@@ -71,6 +72,7 @@ class SettingsCubit extends Cubit<SettingsState> {
     }
   }
 
+  /// Speichert die neue Dauer für lange Pausen.
   Future<void> setLongBreakDuration(Duration newDuration) async {
     try {
       await settingsRepository.updateLongBreakDuration(newDuration);
@@ -80,6 +82,7 @@ class SettingsCubit extends Cubit<SettingsState> {
     }
   }
 
+  /// Legt fest, nach wie vielen Pomodoro-Einheiten eine lange Pause eingelegt wird.
   Future<void> setSessionsBeforeLongBreak(int count) async {
     try {
       await settingsRepository.updateSessionsBeforeLongBreak(count);
@@ -89,6 +92,7 @@ class SettingsCubit extends Cubit<SettingsState> {
     }
   }
 
+  /// Aktiviert oder deaktiviert das automatische Starten der nächsten Pomodoro-Einheit.
   Future<void> toggleAutoStartNextPomodoro(bool value) async {
     try {
       await settingsRepository.updateAutoStartNextPomodoro(value);
@@ -98,6 +102,7 @@ class SettingsCubit extends Cubit<SettingsState> {
     }
   }
 
+  /// Speichert den Namen des eSense-Geräts, das verbunden werden soll.
   Future<void> setESenseDeviceName(String name) async {
     try {
       await settingsRepository.updateESenseDeviceName(name);
@@ -107,24 +112,20 @@ class SettingsCubit extends Cubit<SettingsState> {
     }
   }
 
-  // Methoden zur Verbindung mit eSense
-
+  /// Verbindet sich mit dem eSense-Gerät mithilfe des gespeicherten Namens.
   Future<void> connectESense() async {
     try {
       await _eSenseService.initialize(state.eSenseDeviceName);
-      // Der Verbindungsstatus wird automatisch über den Stream aktualisiert
     } catch (e) {
-      // Handle connection errors
       emit(state.copyWith(status: SettingsStatus.error, errorMessage: 'Fehler beim Verbinden mit eSense: $e'));
     }
   }
 
+  /// Trennt die Verbindung zum eSense-Gerät.
   Future<void> disconnectESense() async {
     try {
       await _eSenseService.disconnect();
-      // Der Verbindungsstatus wird automatisch über den Stream aktualisiert
     } catch (e) {
-      // Handle disconnection errors
       emit(state.copyWith(status: SettingsStatus.error, errorMessage: 'Fehler beim Trennen von eSense: $e'));
     }
   }
