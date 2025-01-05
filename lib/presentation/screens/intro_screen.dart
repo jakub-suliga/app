@@ -17,34 +17,29 @@ class _IntroScreenState extends State<IntroScreen> {
 
   final List<IntroPageData> _pages = [
     IntroPageData(
-      title: 'Willkommen bei der Focus App!',
+      title: 'Willkommen bei FocusBuddy!',
       description:
-          'Diese App hilft Ihnen, Ihre Aufgaben effizient zu verwalten und fokussiert zu arbeiten.',
-      imagePath: 'assets/images/intro_1.png', // Bild zur ersten Seite hinzufügen
+          'Diese App hilft dir, fokussiert zu lernen und deine Aufgaben zu meistern.',
     ),
     IntroPageData(
       title: 'eSense-Kopfhörer verbinden',
       description:
-          'Verbinden Sie Ihre eSense-Kopfhörer zuerst über die Bluetooth-Einstellungen Ihres Android-Geräts. Gehen Sie dann in die App-Einstellungen und geben Sie den Namen Ihrer eSense-Kopfhörer ein. Nur eSense-Kopfhörer werden unterstützt.',
-      // imagePath: 'assets/images/intro_2.png', // Optional: Bild zur zweiten Seite hinzufügen
+          '1. Verbinde deine eSense-Kopfhörer zuerst über die Bluetooth-Einstellungen deines Handys. \n\n 2. Gehe dann in die App-Einstellungen und gib den Namen der eSense-Kopfhörer ein. Nur eSense-Kopfhörer funktionieren.',
     ),
     IntroPageData(
       title: 'Aufgaben erstellen',
       description:
-          'Erstellen Sie Aufgaben, indem Sie eine Priorität, ein Enddatum und die benötigte Zeit für die Aufgabe angeben. Basierend auf diesen Informationen erkennt die App automatisch die beste Aufgabe für Sie.',
-      // imagePath: 'assets/images/intro_3.png', // Optional
+          'Erstelle eine Aufgabe. Dabei kannst du die Priorität, ein Enddatum und die benötigte Zeit für die Aufgabe angeben. Basierend auf diesen Informationen erkennt die App automatisch die beste Aufgabe für dich, die du meistern sollst.',
     ),
     IntroPageData(
       title: 'Pomodoro-Einheit starten',
       description:
-          'Starten Sie eine Pomodoro-Einheit, um konzentriert an Ihrer Aufgabe zu arbeiten. Während der Pomodoro-Einheit überwacht die App Ihre Bewegungen mithilfe der eSense-Kopfhörer, um sicherzustellen, dass Sie sich nicht zu viel bewegen und fokussiert bleiben.',
-      // imagePath: 'assets/images/intro_4.png', // Optional
+          'Nach dem erstellen einer Aufgabe, starte eine Pomodoro-Einheit, um fokussiert an der Aufgabe zu arbeiten. Während der Pomodoro-Einheit überwacht die App Ihre Bewegungen mithilfe der eSense-Kopfhörer, um sicherzustellen, dass Sie sich nicht zu viel bewegen und fokussiert bleiben. Um eine Pomodoro Einheit zu starten, musst du eine Aufgabe hinzufügen.',
     ),
     IntroPageData(
       title: 'Feedback erhalten',
       description:
-          'In den Pausen überprüft die App Ihre Bewegung, um sicherzustellen, dass Sie sich ausreichend bewegen. Abhängig von Ihren Bewegungen erhalten Sie entsprechendes Feedback: Während der Pomodoro-Einheit sollten Sie sich konzentrieren, und während der Pause sollten Sie sich mehr bewegen.',
-      // imagePath: 'assets/images/intro_5.png', // Optional
+          'In den Pausen überprüft die App deine Bewegung, um sicherzustellen, dass du dich ausreichend bewegst. Abhängig von den Bewegungen erhälst du entsprechendes Feedback: Während der Pomodoro-Einheit solltest du dich konzentrieren, und während der Pause solltest du dich mehr bewegen.',
     ),
   ];
 
