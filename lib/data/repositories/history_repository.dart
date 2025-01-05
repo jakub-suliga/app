@@ -8,11 +8,21 @@ class HistoryRepository {
 
   HistoryRepository({required this.dataProvider});
 
-  Future<List<HistoryEntryModel>> getHistory() => dataProvider.loadHistory();
+  Future<List<HistoryEntryModel>> getHistory() async {
+    return await dataProvider.loadHistory();
+  }
 
-  Future<void> addHistoryEntry(HistoryEntryModel entry) =>
-      dataProvider.addEntry(entry);
+  Future<void> saveHistory(List<HistoryEntryModel> history) async {
+    await dataProvider.saveHistory(history);
+  }
 
-  Future<void> saveHistory(List<HistoryEntryModel> history) =>
-      dataProvider.saveHistory(history);
+  /// Methode zum Hinzufügen eines Eintrags
+  Future<void> addEntry(HistoryEntryModel entry) async {
+    await dataProvider.addEntry(entry);
+  }
+
+  /// Methode zum Hinzufügen einer Pomodoro-Session
+  Future<void> addPomodoro(DateTime date, PomodoroDetail detail) async {
+    await dataProvider.addPomodoro(date, detail);
+  }
 }

@@ -3,52 +3,50 @@
 class TaskModel {
   final String id;
   final String title;
-  final String description; // Neues Feld
+  final String description; // Hinzugefügt
   final String priority;
-  final Duration duration;
   final DateTime? endDate;
-  final bool isCompleted; // Bereits vorhanden
+  final Duration duration;
+  final bool isCompleted;
 
   TaskModel({
     required this.id,
     required this.title,
-    required this.description, // Initialisierung des neuen Feldes
+    required this.description, // Hinzugefügt
     required this.priority,
-    required this.duration,
     this.endDate,
+    this.duration = const Duration(minutes: 25),
     this.isCompleted = false,
   });
 
-  // Methode zum Kopieren mit Änderungen
   TaskModel copyWith({
     String? id,
     String? title,
-    String? description, // Optionales Feld
+    String? description, // Hinzugefügt
     String? priority,
-    Duration? duration,
     DateTime? endDate,
+    Duration? duration,
     bool? isCompleted,
   }) {
     return TaskModel(
       id: id ?? this.id,
       title: title ?? this.title,
-      description: description ?? this.description,
+      description: description ?? this.description, // Hinzugefügt
       priority: priority ?? this.priority,
-      duration: duration ?? this.duration,
       endDate: endDate ?? this.endDate,
+      duration: duration ?? this.duration,
       isCompleted: isCompleted ?? this.isCompleted,
     );
   }
 
-  // JSON-Serialisierung
   factory TaskModel.fromJson(Map<String, dynamic> json) {
     return TaskModel(
       id: json['id'],
       title: json['title'],
-      description: json['description'] ?? '',
+      description: json['description'] ?? '', // Hinzugefügt
       priority: json['priority'],
-      duration: Duration(minutes: json['duration']),
       endDate: json['endDate'] != null ? DateTime.parse(json['endDate']) : null,
+      duration: Duration(minutes: json['duration'] ?? 25),
       isCompleted: json['isCompleted'] ?? false,
     );
   }
@@ -57,10 +55,10 @@ class TaskModel {
     return {
       'id': id,
       'title': title,
-      'description': description,
+      'description': description, // Hinzugefügt
       'priority': priority,
-      'duration': duration.inMinutes,
       'endDate': endDate?.toIso8601String(),
+      'duration': duration.inMinutes,
       'isCompleted': isCompleted,
     };
   }

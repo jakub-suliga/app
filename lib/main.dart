@@ -1,76 +1,93 @@
 // lib/main.dart
 
 import 'package:FocusBuddy/presentation/screens/tasks_screen.dart';
-import 'package:FocusBuddy/service/eSenseService.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Importiere die Cubits
-import 'core/app_router.dart';
 import 'logic/settings/settings_cubit.dart';
 import 'logic/tasks/tasks_cubit.dart';
-import 'logic/theme/theme_cubit.dart';
 import 'logic/history/history_cubit.dart';
 
 // Importiere die Repositories und DataProviders
-import 'data/data_providers/history_data_provider.dart';
-import 'data/repositories/history_repository.dart';
+import 'data/data_providers/settings_data_provider.dart';
+import 'data/repositories/settings_repository.dart';
 import 'data/data_providers/tasks_data_provider.dart';
 import 'data/repositories/tasks_repository.dart';
+import 'data/data_providers/history_data_provider.dart';
+import 'data/repositories/history_repository.dart';
 
 // Importiere die Screens
 import 'presentation/screens/intro_screen.dart';
 import 'presentation/screens/history_screen.dart';
 import 'presentation/screens/bottom_nav_screen.dart';
-import 'presentation/screens/pomodoro_screen.dart'; // PomodoroScreen importieren
+import 'presentation/screens/pomodoro_screen.dart';
 
 // Importiere den navigatorKey
-import 'core/app.dart'; // Importiere den navigatorKey
+import 'core/app.dart'; // Stelle sicher, dass dieser Pfad korrekt ist
+
+// Importiere die eSenseService
+import 'service/eSenseService.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final prefs = await SharedPreferences.getInstance();
-  // Lese den gespeicherten Wert; standardmäßig false, damit der Intro-Screen angezeigt wird
-  final introShown = prefs.getBool('introShown') ?? false;
 
-  // Initialize Repositories
-  final historyRepository = HistoryRepository(
-    dataProvider: HistoryDataProvider(),
+  // Initialisiere Repositories
+  final settingsRepository = SettingsRepository(
+    dataProvider: SettingsDataProvider(),
   );
 
   final tasksRepository = TasksRepository(
     dataProvider: TasksDataProvider(),
   );
 
+  final historyRepository = HistoryRepository(
+    dataProvider: HistoryDataProvider(),
+  );
+
+  // Initialisiere eSenseService
+  final eSenseService = ESenseService();
+
+  // Lade den introShown-Status
+  final prefs = await SharedPreferences.getInstance();
+  final introShown = prefs.getBool('introShown') ?? false;
+
   runApp(
     MultiRepositoryProvider(
       providers: [
-        RepositoryProvider<HistoryRepository>(
-          create: (_) => historyRepository,
+        RepositoryProvider<SettingsRepository>(
+          create: (_) => settingsRepository,
         ),
         RepositoryProvider<TasksRepository>(
           create: (_) => tasksRepository,
         ),
+        RepositoryProvider<HistoryRepository>(
+          create: (_) => historyRepository,
+        ),
+        RepositoryProvider<ESenseService>(
+          create: (_) => eSenseService,
+        ),
       ],
       child: MultiBlocProvider(
         providers: [
-          BlocProvider<HistoryCubit>(
-            create: (context) => HistoryCubit(
-              historyRepository: context.read<HistoryRepository>(),
-            )..loadHistory(),
+          BlocProvider<SettingsCubit>(
+            create: (context) => SettingsCubit(
+              settingsRepository: context.read<SettingsRepository>(),
+              eSenseService: context.read<ESenseService>(),
+            ),
           ),
           BlocProvider<TasksCubit>(
             create: (context) => TasksCubit(
               tasksRepository: context.read<TasksRepository>(),
-            )..loadTasks(),
+            ),
           ),
-          BlocProvider<ThemeCubit>(
-            create: (_) => ThemeCubit(),
+          BlocProvider<HistoryCubit>(
+            create: (context) => HistoryCubit(
+              historyRepository: context.read<HistoryRepository>(),
+            ),
           ),
-          BlocProvider<SettingsCubit>(
-            create: (_) => SettingsCubit(ESenseService()),
-          ),
+          // Füge weitere Cubits hier hinzu, falls nötig
         ],
         child: MyApp(showIntroScreen: !introShown),
       ),
@@ -85,52 +102,22 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<HistoryCubit, HistoryState>(
-      builder: (context, historyState) {
-        if (historyState is HistoryLoading) {
-          return MaterialApp(
-            home: Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            ),
-          );
-        } else if (historyState is HistoryLoaded || historyState is HistoryError) {
-          return FocusApp(showIntroScreen: showIntroScreen);
-        } else {
-          // Fallback
-          return MaterialApp(
-            home: Scaffold(
-              body: Center(child: Text('Fehler beim Laden der Historie')),
-            ),
-          );
-        }
+    return MaterialApp(
+      navigatorKey: navigatorKey,
+      title: 'Focus App',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: showIntroScreen ? const IntroScreen() : const BottomNavScreen(),
+      routes: {
+        '/tasks': (context) => const TaskScreen(),
+        '/pomodoro': (context) => const PomodoroScreen(),
+        '/history': (context) => const HistoryScreen(),
+        '/intro': (context) => const IntroScreen(),
+        '/bottomNav': (context) => const BottomNavScreen(),
+        // Füge weitere Routen hinzu, falls nötig
       },
-    );
-  }
-}
-
-class FocusApp extends StatelessWidget {
-  final bool showIntroScreen;
-
-  const FocusApp({super.key, required this.showIntroScreen});
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<ThemeCubit, ThemeState>(
-      builder: (context, themeState) {
-        return MaterialApp(
-          navigatorKey: navigatorKey,
-          title: 'Focus App',
-          theme: themeState.themeData,
-          home: showIntroScreen ? const IntroScreen() : const BottomNavScreen(),
-          routes: {
-            '/tasks': (context) => const TaskScreen(),
-            '/pomodoro': (context) => const PomodoroScreen(),
-            '/history': (context) => const HistoryScreen(),
-            // Füge weitere Routen hinzu, falls nötig
-          },
-          onGenerateRoute: AppRouter.onGenerateRoute,
-        );
-      },
+      // Optional: onGenerateRoute nutzen, falls nötig
     );
   }
 }

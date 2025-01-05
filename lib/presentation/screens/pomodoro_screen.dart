@@ -37,7 +37,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   // AudioPlayer-Instanzen
   final AudioPlayer _focusPlayer = AudioPlayer();
   final AudioPlayer _movePlayer = AudioPlayer();
-  final AudioPlayer _alarmPlayer = AudioPlayer(); // Neuer AudioPlayer für Alarm
 
   // Listen der Audio-Dateien
   final List<String> _focusAudioPaths = [
@@ -53,8 +52,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     'audio/move3.mp3',
     'audio/move4.mp3',
   ];
-
-  final String _alarmAudioPath = 'audio/alarm.mp3'; // Pfad zur Alarm-Audio-Datei
 
   final Random _random = Random();
 
@@ -136,7 +133,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     // Dispose der AudioPlayer-Instanzen
     _focusPlayer.dispose();
     _movePlayer.dispose();
-    _alarmPlayer.dispose(); // Dispose des Alarm-Players
 
     super.dispose();
   }
@@ -237,9 +233,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
         });
       }
       // **Ende der neuen Logik**
-
-      // **Alarm abspielen**
-      _playAlarm(); // Füge dies hinzu, um den Alarm abzuspielen
 
     } else {
       // Eine Pause ist beendet
@@ -712,19 +705,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
       debugPrint('Fehler beim Abspielen der Move-Audio-Datei: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Fehler beim Abspielen der Bewegungs-Audio-Datei.')),
-      );
-    }
-  }
-
-  /// Methode zum Abspielen des Alarmtons
-  void _playAlarm() async {
-    try {
-      await _alarmPlayer.stop(); // Stoppe vorherige Wiedergaben
-      await _alarmPlayer.play(AssetSource(_alarmAudioPath));
-    } catch (e) {
-      debugPrint('Fehler beim Abspielen des Alarmtons: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Fehler beim Abspielen des Alarmtons.')),
       );
     }
   }

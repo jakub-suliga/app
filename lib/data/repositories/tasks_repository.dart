@@ -16,11 +16,21 @@ class TasksRepository {
     await dataProvider.addTask(task);
   }
 
-  Future<void> updateTask(TaskModel task) async {
-    await dataProvider.updateTask(task);
+  Future<void> updateTask(TaskModel updatedTask) async {
+    await dataProvider.updateTask(updatedTask);
   }
 
   Future<void> removeTask(String taskId) async {
     await dataProvider.removeTask(taskId);
+  }
+
+  /// Methode zum Markieren einer Aufgabe als abgeschlossen
+  Future<void> markTaskAsCompleted(String taskId) async {
+    await dataProvider.markTaskAsCompleted(taskId);
+  }
+
+  /// Methode zum Wiederherstellen einer abgeschlossenen Aufgabe
+  Future<void> restoreTask(String taskId) async {
+    await dataProvider.restoreTask(taskId);
   }
 }

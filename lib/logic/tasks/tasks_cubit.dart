@@ -50,10 +50,7 @@ class TasksCubit extends Cubit<TasksState> {
   /// Markiert eine Aufgabe als abgeschlossen
   Future<void> markTaskAsCompleted(String taskId) async {
     try {
-      final tasks = await tasksRepository.getTasks();
-      final task = tasks.firstWhere((task) => task.id == taskId);
-      final updatedTask = task.copyWith(isCompleted: true);
-      await tasksRepository.updateTask(updatedTask);
+      await tasksRepository.markTaskAsCompleted(taskId);
       loadTasks();
     } catch (e) {
       emit(TasksError(e.toString()));
@@ -63,10 +60,7 @@ class TasksCubit extends Cubit<TasksState> {
   /// Stellt eine erledigte Aufgabe wieder her
   Future<void> restoreTask(String taskId) async {
     try {
-      final tasks = await tasksRepository.getTasks();
-      final task = tasks.firstWhere((task) => task.id == taskId);
-      final updatedTask = task.copyWith(isCompleted: false);
-      await tasksRepository.updateTask(updatedTask);
+      await tasksRepository.restoreTask(taskId);
       loadTasks();
     } catch (e) {
       emit(TasksError(e.toString()));

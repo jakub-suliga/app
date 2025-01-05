@@ -1,3 +1,5 @@
+// lib/presentation/screens/intro_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'bottom_nav_screen.dart';
@@ -44,7 +46,9 @@ class _IntroScreenState extends State<IntroScreen> {
 
   Future<void> _setIntroShown() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('introShown', _doNotShowAgain); // Speichere nur, wenn der Haken gesetzt wurde
+    if (_doNotShowAgain) {
+      await prefs.setBool('introShown', true);
+    }
   }
 
   void _navigateToMain() {
@@ -103,19 +107,21 @@ class _IntroScreenState extends State<IntroScreen> {
             ),
           ),
           if (_currentPage == _pages.length - 1)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Checkbox(
-                  value: _doNotShowAgain,
-                  onChanged: (bool? value) {
-                    setState(() {
-                      _doNotShowAgain = value ?? false;
-                    });
-                  },
-                ),
-                const Text('Nicht mehr anzeigen'),
-              ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                children: [
+                  Checkbox(
+                    value: _doNotShowAgain,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        _doNotShowAgain = value ?? false;
+                      });
+                    },
+                  ),
+                  const Text('Nicht mehr anzeigen'),
+                ],
+              ),
             ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
