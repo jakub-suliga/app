@@ -37,6 +37,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   // AudioPlayer-Instanzen
   final AudioPlayer _focusPlayer = AudioPlayer();
   final AudioPlayer _movePlayer = AudioPlayer();
+  final AudioPlayer _alarmPlayer = AudioPlayer(); // Neuer AudioPlayer für Alarm
 
   // Listen der Audio-Dateien
   final List<String> _focusAudioPaths = [
@@ -52,6 +53,8 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     'audio/move3.mp3',
     'audio/move4.mp3',
   ];
+
+  final String _alarmAudioPath = 'audio/alarm.mp3'; // Pfad zur Alarm-Audio-Datei
 
   final Random _random = Random();
 
@@ -133,6 +136,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     // Dispose der AudioPlayer-Instanzen
     _focusPlayer.dispose();
     _movePlayer.dispose();
+    _alarmPlayer.dispose(); // Dispose des Alarm-Players
 
     super.dispose();
   }
@@ -233,6 +237,9 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
         });
       }
       // **Ende der neuen Logik**
+
+      // **Alarm abspielen**
+      _playAlarm(); // Füge dies hinzu, um den Alarm abzuspielen
 
     } else {
       // Eine Pause ist beendet
@@ -441,103 +448,117 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
 
   /// Widget für die Wochenübersicht mit Navigationspfeilen
   Widget _weeklyProgressWidget() {
-    return Card(
-      color: Colors.blue.shade50, // Gleiche Hintergrundfarbe wie andere Cards
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 8.0),
-        child: BlocBuilder<HistoryCubit, HistoryState>(
-          builder: (context, state) {
-            if (state is! HistoryLoaded) {
-              return SizedBox.shrink(); // Kein Inhalt, wenn die Historie noch nicht geladen ist
-            }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // **Neuer Titel "Tägliche Aufgaben Challenge"**
+        const Text(
+          'Tägliche Aufgaben Challenge',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Card(
+          color: Colors.blue.shade50, // Gleiche Hintergrundfarbe wie andere Cards
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 8.0),
+            child: BlocBuilder<HistoryCubit, HistoryState>(
+              builder: (context, state) {
+                if (state is! HistoryLoaded) {
+                  return SizedBox.shrink(); // Kein Inhalt, wenn die Historie noch nicht geladen ist
+                }
 
-            final history = state.history;
-            // Erstelle eine Liste der Wochentage von Montag bis Sonntag
-            List<DateTime> weekDays = List.generate(7, (index) {
-              return _currentWeekStart.add(Duration(days: index));
-            });
+                final history = state.history;
+                // Erstelle eine Liste der Wochentage von Montag bis Sonntag
+                List<DateTime> weekDays = List.generate(7, (index) {
+                  return _currentWeekStart.add(Duration(days: index));
+                });
 
-            // Überprüfe, ob an jedem Tag der Woche eine Aufgabe erledigt wurde
-            List<bool> tasksCompleted = weekDays.map((day) {
-              return history.any((entry) =>
-                  _isSameDay(entry.date, day) && entry.pomodoroCount > 0);
-            }).toList();
+                // Überprüfe, ob an jedem Tag der Woche eine Aufgabe erledigt wurde
+                List<bool> tasksCompleted = weekDays.map((day) {
+                  return history.any((entry) =>
+                      _isSameDay(entry.date, day) && entry.pomodoroCount > 0);
+                }).toList();
 
-            return Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Linker Pfeil
-                IconButton(
-                  icon: const Icon(Icons.arrow_left),
-                  onPressed: _goToPreviousWeek,
-                ),
-                // Wochentage in Kreisen innerhalb eines Flexible Widgets
-                Flexible(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: List.generate(7, (index) {
-                        final day = weekDays[index];
-                        final isCompleted = tasksCompleted[index];
-                        final dayLabel = DateFormat.E().format(day); // MO, DI, etc.
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Linker Pfeil
+                    IconButton(
+                      icon: const Icon(Icons.arrow_left),
+                      onPressed: _goToPreviousWeek,
+                    ),
+                    // Wochentage in Kreisen innerhalb eines Flexible Widgets
+                    Flexible(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: List.generate(7, (index) {
+                            final day = weekDays[index];
+                            final isCompleted = tasksCompleted[index];
+                            final dayLabel = DateFormat.E().format(day); // MO, DI, etc.
 
-                        return Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                          child: Column(
-                            children: [
-                              AnimatedContainer(
-                                duration: const Duration(milliseconds: 500),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: isCompleted ? Colors.green : Colors.grey,
-                                    width: 2.0,
-                                  ),
-                                  boxShadow: isCompleted
-                                      ? [
-                                          BoxShadow(
-                                            color: Colors.green.withOpacity(0.5),
-                                            spreadRadius: 2,
-                                            blurRadius: 5,
-                                          ),
-                                        ]
-                                      : [],
-                                ),
-                                child: CircleAvatar(
-                                  radius: 16, // Reduzierte Größe
-                                  backgroundColor: Colors.white, // Innere Farbe weiß
-                                  child: Text(
-                                    dayLabel.substring(0, 2), // Erste zwei Buchstaben
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
-                                      fontSize: 12, // Kleinere Schriftgröße
+                            return Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                              child: Column(
+                                children: [
+                                  AnimatedContainer(
+                                    duration: const Duration(milliseconds: 500),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: isCompleted ? Colors.green : Colors.grey,
+                                        width: 2.0,
+                                      ),
+                                      boxShadow: isCompleted
+                                          ? [
+                                              BoxShadow(
+                                                color: Colors.green.withOpacity(0.5),
+                                                spreadRadius: 2,
+                                                blurRadius: 5,
+                                              ),
+                                            ]
+                                          : [],
+                                    ),
+                                    child: CircleAvatar(
+                                      radius: 16, // Reduzierte Größe
+                                      backgroundColor: Colors.white, // Innere Farbe weiß
+                                      child: Text(
+                                        dayLabel.substring(0, 2), // Erste zwei Buchstaben
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black,
+                                          fontSize: 12, // Kleinere Schriftgröße
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    DateFormat.d().format(day), // Tag der Woche
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                DateFormat.d().format(day), // Tag der Woche
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
+                            );
+                          }),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                // Rechter Pfeil
-                IconButton(
-                  icon: const Icon(Icons.arrow_right),
-                  onPressed: _goToNextWeek,
-                ),
-              ],
-            );
-          },
+                    // Rechter Pfeil
+                    IconButton(
+                      icon: const Icon(Icons.arrow_right),
+                      onPressed: _goToNextWeek,
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -573,7 +594,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
             const SizedBox(height: 20),
             _control(),
             const SizedBox(height: 20),
-            _weeklyProgressWidget(), // Hinzugefügtes Widget für die Wochenübersicht
+            _weeklyProgressWidget(), // Hinzugefügtes Widget für die Wochenübersicht mit Titel
           ],
         ),
       ),
@@ -705,6 +726,19 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
       debugPrint('Fehler beim Abspielen der Move-Audio-Datei: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Fehler beim Abspielen der Bewegungs-Audio-Datei.')),
+      );
+    }
+  }
+
+  /// Methode zum Abspielen des Alarmtons
+  void _playAlarm() async {
+    try {
+      await _alarmPlayer.stop(); // Stoppe vorherige Wiedergaben
+      await _alarmPlayer.play(AssetSource(_alarmAudioPath));
+    } catch (e) {
+      debugPrint('Fehler beim Abspielen des Alarmtons: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Fehler beim Abspielen des Alarmtons.')),
       );
     }
   }
