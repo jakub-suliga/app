@@ -572,15 +572,16 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Pomodoro Timer'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.task),
-            onPressed: () {
-              Navigator.pushNamed(context, '/tasks');
-            },
-            tooltip: 'Aufgaben verwalten',
-          ),
-        ],
+        // **Entfernung des Buttons aus dem AppBar**
+        // actions: [
+        //   IconButton(
+        //     icon: const Icon(Icons.task),
+        //     onPressed: () {
+        //       Navigator.pushNamed(context, '/tasks');
+        //     },
+        //     tooltip: 'Aufgaben verwalten',
+        //   ),
+        // ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(5.0, 30.0, 5.0, 15.0),
