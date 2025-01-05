@@ -1,13 +1,18 @@
 // lib/logic/tasks/tasks_cubit.dart
 
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../data/models/task_model.dart';
+import '../../logic/history/history_cubit.dart';
+import '../../data/models/history_entry_model.dart'; // Importiere PomodoroDetail
 
 part 'tasks_state.dart';
 
 class TasksCubit extends Cubit<TasksState> {
-  TasksCubit() : super(TasksInitial());
+  final HistoryCubit historyCubit; // Füge HistoryCubit hinzu
+
+  TasksCubit({required this.historyCubit}) : super(TasksInitial());
 
   final List<TaskModel> _tasks = [];
 
@@ -84,5 +89,21 @@ class TasksCubit extends Cubit<TasksState> {
       default:
         return 2; // Standardpriorität
     }
+  }
+
+  /// Methode zum Hinzufügen einer abgeschlossenen Pomodoro-Session zur Historie
+  void addCompletedPomodoro(TaskModel task, Duration duration) {
+    final pomodoroDetail = PomodoroDetail(
+      duration: duration,
+      taskTitle: task.title,
+    );
+    final today = DateTime.now();
+    historyCubit.addPomodoro(today, pomodoroDetail).then((_) {
+      // Optional: Zeige eine Bestätigung an, dass die Historie aktualisiert wurde
+      debugPrint('Pomodoro zur Historie hinzugefügt.');
+    }).catchError((error) {
+      // Fehlerbehandlung
+      debugPrint('Fehler beim Hinzufügen der Pomodoro zur Historie: $error');
+    });
   }
 }

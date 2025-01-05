@@ -1,9 +1,12 @@
-import 'package:flutter/material.dart';
+// lib/core/app_router.dart
+
+import 'package:flutter/material.dart'; 
 import '../presentation/screens/bottom_nav_screen.dart';
 import '../presentation/screens/environment_screen.dart';
 import '../presentation/screens/pomodoro_screen.dart';
 import '../presentation/screens/tasks_screen.dart';
 import '../presentation/screens/settings_screen.dart';
+import '../presentation/screens/history_screen.dart'; // Importiere den HistoryScreen
 
 class AppRouter {
   static Route onGenerateRoute(RouteSettings settings) {
@@ -22,6 +25,9 @@ class AppRouter {
 
       case '/settings':
         return MaterialPageRoute(builder: (_) => const SettingsScreen());
+
+      case '/history':
+        return MaterialPageRoute(builder: (_) => const HistoryScreen()); // Neue Route
 
       default:
         return MaterialPageRoute(builder: (_) => const BottomNavScreen());

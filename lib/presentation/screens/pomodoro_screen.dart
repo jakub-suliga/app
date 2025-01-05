@@ -10,6 +10,8 @@ import '../../logic/tasks/tasks_cubit.dart';
 import '../../data/models/task_model.dart';
 import '../../logic/settings/settings_cubit.dart';
 import '../../service/eSenseService.dart'; // Stellen Sie sicher, dass dieser Pfad korrekt ist
+import '../../logic/history/history_cubit.dart'; // Importiere HistoryCubit
+import '../../data/models/history_entry_model.dart'; // Importiere PomodoroDetail
 
 class PomodoroScreen extends StatefulWidget {
   const PomodoroScreen({super.key});
@@ -187,6 +189,23 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
             SnackBar(content: Text('Aufgabe "${updatedTask.title}" aktualisiert: ${_formatDuration(newDuration)} verbleibend.')),
           );
         }
+
+        // **Hinzufügen zur Historie**
+        final historyCubit = context.read<HistoryCubit>();
+        final today = DateTime.now();
+        final pomodoroDetail = PomodoroDetail(
+          duration: pomodoroDuration,
+          taskTitle: selectedTask.title,
+        );
+        historyCubit.addPomodoro(today, pomodoroDetail).then((_) {
+          // Optional: Zeige eine Bestätigung an, dass die Historie aktualisiert wurde
+          debugPrint('Pomodoro zur Historie hinzugefügt.');
+        }).catchError((error) {
+          // Fehlerbehandlung
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Fehler beim Hinzufügen der Pomodoro zur Historie: $error')),
+          );
+        });
       }
       // **Ende der neuen Logik**
 
@@ -297,7 +316,9 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
           ),
           title: Text(
             'Aktuelle Aufgabe: ${_nextTask!.title}',
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
           ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -632,7 +653,7 @@ class RadialPainter extends CustomPainter {
   }
 }
 
-/// Aktualisierte PomoTimer-Klasse mit dynamischen Einstellungen
+/// Benutzerdefinierte PomoTimer-Klasse mit dynamischen Einstellungen
 class PomoTimer {
   final Function onTimerUpdate;
   final Function(bool isSession) onSessionComplete;
