@@ -1,8 +1,6 @@
-// lib/presentation/screens/intro_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'bottom_nav_screen.dart'; // Importieren Sie den Haupt-Screen
+import 'bottom_nav_screen.dart';
 
 class IntroScreen extends StatefulWidget {
   const IntroScreen({super.key});
@@ -14,6 +12,7 @@ class IntroScreen extends StatefulWidget {
 class _IntroScreenState extends State<IntroScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
+  bool _doNotShowAgain = false; // Checkbox-Status
 
   final List<IntroPageData> _pages = [
     IntroPageData(
@@ -24,43 +23,28 @@ class _IntroScreenState extends State<IntroScreen> {
     IntroPageData(
       title: 'eSense-Kopfhörer verbinden',
       description:
-          '1. Verbinde deine eSense-Kopfhörer zuerst über die Bluetooth-Einstellungen deines Handys. \n\n 2. Gehe dann in die App-Einstellungen und gib den Namen der eSense-Kopfhörer ein. Nur eSense-Kopfhörer funktionieren.',
+          '1. Verbinde deine eSense-Kopfhörer zuerst über die Bluetooth-Einstellungen deines Handys. \n\n 2. Gehe dann in die App-Einstellungen und gib den Namen der eSense-Kopfhörer ein. Du kannst nur eSense-Kopfhörer verwenden.',
     ),
     IntroPageData(
       title: 'Aufgaben erstellen',
       description:
-          'Erstelle eine Aufgabe. Dabei kannst du die Priorität, ein Enddatum und die benötigte Zeit für die Aufgabe angeben. Basierend auf diesen Informationen erkennt die App automatisch die beste Aufgabe für dich, die du meistern sollst.',
+          'Erstelle eine Aufgabe. Dabei kannst du die Priorität, ein Enddatum und die benötigte Zeit für die Aufgabe angeben. Basierend auf diesen Informationen erkennt die App automatisch die beste Aufgabe für dich, die du meistern kannst.',
     ),
     IntroPageData(
       title: 'Pomodoro-Einheit starten',
       description:
-          'Nach dem erstellen einer Aufgabe, starte eine Pomodoro-Einheit, um fokussiert an der Aufgabe zu arbeiten. Während der Pomodoro-Einheit überwacht die App Ihre Bewegungen mithilfe der eSense-Kopfhörer, um sicherzustellen, dass Sie sich nicht zu viel bewegen und fokussiert bleiben. Um eine Pomodoro Einheit zu starten, musst du eine Aufgabe hinzufügen.',
+          'Nach dem Erstellen einer Aufgabe starte eine Pomodoro-Einheit, um fokussiert an der Aufgabe zu arbeiten. Während der Pomodoro-Einheit überwacht die App deine Bewegungen mithilfe der eSense-Kopfhörer, um sicherzustellen, dass du dich nicht zu viel bewegst und fokussiert bleibst. Um eine Pomodoro Einheit zu starten, musst du eine Aufgabe hinzufügen.',
     ),
     IntroPageData(
       title: 'Feedback erhalten',
       description:
-          'In den Pausen überprüft die App deine Bewegung, um sicherzustellen, dass du dich ausreichend bewegst. Abhängig von den Bewegungen erhälst du entsprechendes Feedback: Während der Pomodoro-Einheit solltest du dich konzentrieren, und während der Pause solltest du dich mehr bewegen.',
+          'In den Pausen überprüft die App deine Bewegung, um sicherzustellen, dass du dich ausreichend bewegst. Abhängig von den Bewegungen erhälst du entsprechendes Feedback: Während der Pomodoro-Einheit solltest du dich konzentrieren, und während der Pause solltest du dich bewegen.',
     ),
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    _checkIfIntroShown();
-  }
-
-  Future<void> _checkIfIntroShown() async {
+  Future<void> _setIntroShown() async {
     final prefs = await SharedPreferences.getInstance();
-    final introShown = prefs.getBool('introShown') ?? false;
-
-    if (introShown) {
-      _navigateToMain();
-    }
-  }
-
-  void _setIntroShown() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('introShown', true);
+    await prefs.setBool('introShown', _doNotShowAgain); // Speichere nur, wenn der Haken gesetzt wurde
   }
 
   void _navigateToMain() {
@@ -70,14 +54,8 @@ class _IntroScreenState extends State<IntroScreen> {
     );
   }
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
   void _finishIntro() {
-    _setIntroShown();
+    _setIntroShown(); // Speichere den Haken-Status
     _navigateToMain();
   }
 
@@ -86,15 +64,6 @@ class _IntroScreenState extends State<IntroScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Einführung'),
-        actions: [
-          TextButton(
-            onPressed: _finishIntro,
-            child: const Text(
-              'Überspringen',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
       ),
       body: Column(
         children: [
@@ -113,14 +82,6 @@ class _IntroScreenState extends State<IntroScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Anzeigen des Bildes, falls vorhanden
-                      if (_pages[index].imagePath != null)
-                        Image.asset(
-                          _pages[index].imagePath!,
-                          height: 200,
-                        ),
-                      if (_pages[index].imagePath != null)
-                        const SizedBox(height: 20),
                       Text(
                         _pages[index].title,
                         style: const TextStyle(
@@ -141,12 +102,26 @@ class _IntroScreenState extends State<IntroScreen> {
               },
             ),
           ),
+          if (_currentPage == _pages.length - 1)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Checkbox(
+                  value: _doNotShowAgain,
+                  onChanged: (bool? value) {
+                    setState(() {
+                      _doNotShowAgain = value ?? false;
+                    });
+                  },
+                ),
+                const Text('Nicht mehr anzeigen'),
+              ],
+            ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Seitenindikatoren
                 Row(
                   children: List.generate(_pages.length, (index) {
                     return Container(
@@ -162,7 +137,6 @@ class _IntroScreenState extends State<IntroScreen> {
                     );
                   }),
                 ),
-                // Weiter- oder Fertig-Button
                 ElevatedButton(
                   onPressed: () {
                     if (_currentPage == _pages.length - 1) {
@@ -189,11 +163,9 @@ class _IntroScreenState extends State<IntroScreen> {
 class IntroPageData {
   final String title;
   final String description;
-  final String? imagePath;
 
   IntroPageData({
     required this.title,
     required this.description,
-    this.imagePath,
   });
 }
