@@ -14,7 +14,7 @@ class SettingsCubit extends Cubit<SettingsState> {
   late final StreamSubscription<String> _deviceStatusSubscription;
 
   SettingsCubit(this._eSenseService) : super(const SettingsState(
-    eSenseDeviceName: 'DefaultDevice',
+    eSenseDeviceName: 'eSense-',
     priorities: [
       'Hoch',
       'Mittel',
