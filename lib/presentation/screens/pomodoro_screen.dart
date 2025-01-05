@@ -94,9 +94,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     if (context.read<TasksCubit>().state is TasksLoaded) {
       _nextTask = context.read<TasksCubit>().getNextTask();
     }
-
-    // Lade die Audio-Dateien
-    _loadAudioFiles();
   }
 
   @override
@@ -132,12 +129,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     });
   }
 
-  // Lade die Audio-Dateien (optional, da wir die Audio-Dateien bei Bedarf laden)
-  void _loadAudioFiles() async {
-    // Hier können wir vorab die Audio-Dateien laden, falls gewünscht
-    // In diesem Beispiel laden wir sie bei Bedarf
-    // Dies ist optional und kann weggelassen werden
-  }
 
   void _onTimerUpdate() {
     setState(() {
@@ -317,28 +308,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
               Text('Verbleibende Dauer: ${_formatDuration(_nextTask!.duration)}'),
             ],
           ),
-          // **Bearbeitungs- und Lösch-Icons entfernt**
-          // Entfernte Zeilen:
-          // trailing: Row(
-          //   mainAxisSize: MainAxisSize.min,
-          //   children: [
-          //     // Bearbeiten-Icon (Stift)
-          //     IconButton(
-          //       icon: const Icon(Icons.edit, color: Colors.blue),
-          //       onPressed: () => _editTask(context, _nextTask!),
-          //       tooltip: 'Aufgabe bearbeiten',
-          //     ),
-          //     // Löschen-Icon (Müll)
-          //     IconButton(
-          //       icon: const Icon(Icons.delete, color: Colors.red),
-          //       onPressed: () {
-          //         // Bestätigungsdialog vor dem Löschen
-          //         _confirmDelete(context, _nextTask!);
-          //       },
-          //       tooltip: 'Aufgabe löschen',
-          //     ),
-          //   ],
-          // ),
         ),
       );
     }
@@ -445,9 +414,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
         padding: const EdgeInsets.fromLTRB(5.0, 30.0, 5.0, 15.0),
         child: Column(
           children: <Widget>[
-            // **Entfernt: _movementInstruction(), Bewegungsanweisungen anzeigen**
-            // Dieser Aufruf wurde entfernt, um die über der Fokus-Status-Box angezeigten Texte zu entfernen.
-            // const SizedBox(height: 10),
             _focusStatusDisplay(), // Fokus-Status anzeigen
             const SizedBox(height: 10),
             _currentTaskDisplay(), // Anzeige der aktuellen Aufgabe oder "Keine bevorstehende Aufgabe"

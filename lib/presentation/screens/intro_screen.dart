@@ -189,11 +189,11 @@ class _IntroScreenState extends State<IntroScreen> {
 class IntroPageData {
   final String title;
   final String description;
-  final String? imagePath; // Optionales Bildfeld
+  final String? imagePath;
 
   IntroPageData({
     required this.title,
     required this.description,
-    this.imagePath, // Initialisierung des optionalen Bildes
+    this.imagePath,
   });
 }

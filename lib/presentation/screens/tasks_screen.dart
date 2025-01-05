@@ -17,7 +17,6 @@ class TasksScreen extends StatefulWidget {
 class _TasksScreenState extends State<TasksScreen> {
   String searchQuery = '';
   String selectedPrio = 'Alle';
-  // List<String> selectedTags = []; // Entfernt
 
   @override
   Widget build(BuildContext context) {
@@ -64,17 +63,6 @@ class _TasksScreenState extends State<TasksScreen> {
     if (selectedPrio != 'Alle') {
       tasks = tasks.where((t) => t.priority == selectedPrio).toList();
     }
-    // Filter nach Tags - Entfernt
-    /*
-    if (selectedTags.isNotEmpty) {
-      tasks = tasks.where((t) {
-        for (final tag in selectedTags) {
-          if (t.tags.contains(tag)) return true;
-        }
-        return false;
-      }).toList();
-    }
-    */
     return tasks;
   }
 

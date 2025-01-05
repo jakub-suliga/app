@@ -57,7 +57,6 @@ class FocusApp extends StatelessWidget {
           theme: themeState.themeData,
           home: const IntroScreen(), // Setze IntroScreen als Start-Widget
           onGenerateRoute: AppRouter.onGenerateRoute,
-          // initialRoute: '/', // Entferne initialRoute, wenn du 'home' verwendest
         );
       },
     );
